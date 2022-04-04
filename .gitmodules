@@ -1,0 +1,6 @@
+[submodule "exteral/libpowersensor"]
+	path = exteral/libpowersensor
+	url = git@gitlab.com:astron-misc/libpowersensor.git
+[submodule "external/libpowersensor"]
+	path = external/libpowersensor
+	url = git@gitlab.com:astron-misc/libpowersensor.git
