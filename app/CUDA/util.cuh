@@ -122,6 +122,7 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
 
   double joules = 0;
   report(func_name, avg_milliseconds * 1e-3, gflops, gbytes, mvis, joules);
+  report_csv(func_name, get_device_name(), "-cuda.csv", avg_milliseconds * 1e-3, gflops, gbytes, mvis, joules);
 }
 
 template <typename T>
