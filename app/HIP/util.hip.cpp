@@ -1,6 +1,6 @@
 #include "util.hip.hpp"
 
-namespace hip{
+namespace hip {
 std::string extern_get_device_name() { return get_device_name(); }
 
 void extern_print_device_info() { print_device_info(); }
@@ -8,4 +8,4 @@ void extern_print_device_info() { print_device_info(); }
 void print_benchmark() {
   std::cout << ">>> HIP Theoretical performance and bandwidth" << std::endl;
 }
-}
+} // namespace hip

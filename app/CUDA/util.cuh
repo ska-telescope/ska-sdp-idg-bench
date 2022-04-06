@@ -89,12 +89,12 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
 
-  float seconds, joules;
+  double seconds, avg_time, joules, avg_joules;
+  std::vector<double> ex_joules, ex_time;
 #ifdef ENABLE_POWERSENSOR
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
   powersensor::State start, end;
-  std::vector<double> ex_joules;
 #else
   cudaEvent_t start, stop;
   cudaCheck(cudaEventCreate(&start));
@@ -111,8 +111,6 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   std::cout << "NR_WARM_UP_RUNS: " << nr_warm_up_runs << std::endl;
   std::cout << "NR_ITERATIONS: " << nr_iterations << std::endl;
 #endif
-
-  std::vector<float> ex_time;
 
   for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
 #ifdef ENABLE_POWERSENSOR
@@ -132,21 +130,19 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
     cudaCheck(cudaEventRecord(stop));
 
     cudaCheck(cudaEventSynchronize(stop));
-    seconds = 0;
     cudaCheck(cudaEventElapsedTime(&seconds, start, stop));
     seconds *= 1e-3;
 #endif
     ex_time.push_back(seconds);
   }
 
-  double avg_joules;
 #ifdef ENABLE_POWERSENSOR
   avg_joules = std::accumulate(ex_joules.begin() + nr_warm_up_runs,
                                ex_joules.end(), 0.0) /
                (ex_joules.size() - nr_warm_up_runs);
 #endif
 
-  float avg_time =
+  avg_time =
       std::accumulate(ex_time.begin() + nr_warm_up_runs, ex_time.end(), 0.0) /
       (ex_time.size() - nr_warm_up_runs);
 

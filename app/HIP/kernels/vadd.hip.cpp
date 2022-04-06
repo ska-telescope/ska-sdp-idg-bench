@@ -1,7 +1,7 @@
 #include "util.hip.hpp"
 
 namespace hip {
-  
+
 __global__ void kernel_vadd(float *a, float *b, float *c, int size) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
 

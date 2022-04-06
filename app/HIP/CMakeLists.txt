@@ -1,6 +1,6 @@
 project(lib-hip CUDA CXX)
 
-file(GLOB hip-sources "./kernels/*.hip.cpp")
+file(GLOB hip-sources "./kernels/*.hip.cpp" "./*.hip.cpp")
 
 if("${GPU_BRAND}" STREQUAL "NVIDIA")
   set(CMAKE_CUDA_COMPILER hipcc)
@@ -19,5 +19,11 @@ add_compile_options(-std=c++17)
 include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/app
                     ${CMAKE_SOURCE_DIR}/app/HIP)
 add_library(${PROJECT_NAME} SHARED ${hip-sources})
+
+if(BUILD_LIBPOWERSENSOR)
+  target_compile_options(${PROJECT_NAME} PRIVATE -DENABLE_POWERSENSOR)
+  target_link_libraries(${PROJECT_NAME} PUBLIC powersensor)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC lib-common)
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

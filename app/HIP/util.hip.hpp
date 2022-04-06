@@ -1,14 +1,20 @@
 #pragma once
 
-#include <hip/hip_runtime.h>
 #include "lib-common.hpp"
+#include <hip/hip_runtime.h>
+
+#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
+#include <powersensor/NVMLPowerSensor.h>
+#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
+#include <powersensor/AMDGPUPowerSensor.h>
+#endif
 
 namespace hip {
 
-#define hipCheck(ans)                                                         \
+#define hipCheck(ans)                                                          \
   { hipAssert((ans), __FILE__, __LINE__); }
 inline void hipAssert(hipError_t code, const char *file, int line,
-                       bool abort = true) {
+                      bool abort = true) {
   if (code != hipSuccess) {
     fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
             line);
@@ -85,6 +91,22 @@ template <typename T>
 void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
+  double seconds, avg_time, joules, avg_joules;
+  std::vector<double> ex_joules, ex_time;
+#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
+  std::unique_ptr<powersensor::PowerSensor> powersensor(
+      powersensor::nvml::NVMLPowerSensor::create());
+  powersensor::State start, end;
+#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
+  std::unique_ptr<powersensor::PowerSensor> powersensor(
+      powersensor::amdgpu::AMDGPUPowerSensor::create());
+  powersensor::State start,
+      end
+#else
+  hipEvent_t start, stop;
+  hipCheck(hipEventCreate(&start));
+  hipCheck(hipEventCreate(&stop));
+#endif
 
   int nr_warm_up_runs = get_env_var("NR_WARM_UP_RUNS", 2);
   int nr_iterations = get_env_var("NR_ITERATIONS", 5);
@@ -97,33 +119,43 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   std::cout << "NR_ITERATIONS: " << nr_iterations << std::endl;
 #endif
 
-  hipEvent_t start, stop;
-  hipCheck(hipEventCreate(&start));
-  hipCheck(hipEventCreate(&stop));
-
-  std::vector<float> ex_time;
-
   for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
+#ifdef ENABLE_POWERSENSOR
+    start = powersensor->read();
+#else
     hipCheck(hipEventRecord(start));
-
+#endif
     hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
 
+#ifdef ENABLE_POWERSENSOR
+    cudaDeviceSynchronize();
+    end = powersensor->read();
+    seconds = powersensor->seconds(start, end);
+    joules = powersensor->Joules(start, end);
+    ex_joules.push_back(joules);
+#else
     hipCheck(hipEventRecord(stop));
 
     hipCheck(hipEventSynchronize(stop));
-
-    float milliseconds = 0;
-    hipCheck(hipEventElapsedTime(&milliseconds, start, stop));
-
-    ex_time.push_back(milliseconds);
+    hipCheck(hipEventElapsedTime(&seconds, start, stop));
+    seconds *= 1e-3;
+#endif
+    ex_time.push_back(seconds);
   }
-  float avg_milliseconds =
+
+#ifdef ENABLE_POWERSENSOR
+  avg_joules = std::accumulate(ex_joules.begin() + nr_warm_up_runs,
+                               ex_joules.end(), 0.0) /
+               (ex_joules.size() - nr_warm_up_runs);
+#endif
+
+  avg_time =
       std::accumulate(ex_time.begin() + nr_warm_up_runs, ex_time.end(), 0.0) /
       (ex_time.size() - nr_warm_up_runs);
 
-  double joules = 0;
-  report(func_name, avg_milliseconds * 1e-3, gflops, gbytes, mvis, joules);
-  report_csv(func_name, get_device_name(), "-hip.csv", avg_milliseconds * 1e-3, gflops, gbytes, mvis, joules);
+  report(func_name, avg_time, gflops, gbytes, mvis, avg_joules);
+  report_csv(func_name, get_device_name(), "-hip.csv", avg_time, gflops, gbytes,
+             mvis, avg_joules);
 }
 
 template <typename T>
