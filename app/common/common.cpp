@@ -8,7 +8,7 @@ unsigned roundToPowOf2(unsigned number) {
 }
 
 unsigned long get_env_var(const char *env_var, unsigned long default_value) {
-    if (const char *env_p = std::getenv(env_var)) {
+  if (const char *env_p = std::getenv(env_var)) {
     return atoi(env_p);
   } else {
     return default_value;
@@ -102,23 +102,22 @@ void report(std::string name, double seconds, double gflops, double gbytes,
   std::cout << std::endl;
 }
 
-
-void report_csv(std::string name, std::string device_name, std::string file_extension, double seconds, double gflops, double gbytes,
-            double mvis, double joules) 
-{
-if (device_name.empty() || file_extension.empty()) {
+void report_csv(std::string name, std::string device_name,
+                std::string file_extension, double seconds, double gflops,
+                double gbytes, double mvis, double joules) {
+  if (device_name.empty() || file_extension.empty()) {
     std::cout << ">>> Device name or file extension not provided" << std::endl;
-}
-else{
-  std::string file_path = get_env_var("OUTPUT_PATH", ".");
-  std::cout << "Saving output in " << file_path << std::endl;
+  } else {
+    std::string file_path = get_env_var("OUTPUT_PATH", ".");
+    std::cout << "Saving output in " << file_path << std::endl;
 
     std::ofstream output;
-    std::cout << file_path + "/" + device_name + "-" + name + file_extension << std::endl;
-    output.open(file_path + "/" + device_name + "-" + name + file_extension );
+    std::cout << file_path + "/" + device_name + "-" + name + file_extension
+              << std::endl;
+    output.open(file_path + "/" + device_name + "-" + name + file_extension);
     output << std::fixed << std::setprecision(2);
 
-    output << "ms," << seconds << "\n";
+    output << "ms," << seconds * 1e3 << "\n";
     if (gflops != 0) {
       output << "GFLOP/s," << gflops / seconds << "\n";
     }
@@ -140,6 +139,4 @@ else{
     }
     output.close();
   }
-
 }
-

@@ -4,6 +4,9 @@ project(idg-bench CXX)
 
 include(CMakeDependentOption)
 include(CheckLanguage)
+include(ExternalProject)
+
+option(BUILD_LIBPOWERSENSOR OFF)
 
 option(BUILD_CPU "Build CPU version (check GPU correctness)" ON)
 set(GPU_BRANDS NVIDIA AMD)
@@ -26,6 +29,26 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-O3 -fno-math-errno -march=native")
 set(CMAKE_CXX_FLAGS_DEBUG "-O3 -fno-math-errno -march=native -DDEBUG")
+
+if(BUILD_LIBPOWERSENSOR)
+  set(EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR
+      ${CMAKE_SOURCE_DIR}/external/libpowersensor)
+  ExternalProject_Add(
+    libpowersensor
+    GIT_REPOSITORY https://gitlab.com/astron-misc/libpowersensor
+    GIT_TAG master
+    # add other arguments if needed such as build with CUDA and find the
+    # necessary packages above such as FFTW
+    CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}
+      -DBUILD_LIKWID_POWERSENSOR=OFF -DBUILD_ARDUINO_POWERSENSOR=OFF
+      -DBUILD_NVML_POWERSENSOR=${BUILD_CUDA}
+    # Uncomment the next line if you want to always build the external project
+    # BUILD_ALWAYS 1
+  )
+  include_directories(${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}/include)
+  link_directories(${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}/lib)
+endif()
 
 if(BUILD_CUDA AND "${GPU_BRAND}" STREQUAL "NVIDIA")
   set(CMAKE_CUDA_FLAGS_RELEASE "-O3")
