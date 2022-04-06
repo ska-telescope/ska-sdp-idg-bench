@@ -1,6 +1,6 @@
-#include "util.cuh"
+#include "util.hip.hpp"
 
-namespace cuda {
+namespace hip {
   
 __global__ void kernel_vadd(float *a, float *b, float *c, int size) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -27,18 +27,18 @@ void p_run_vadd() {
   double gbytes = size * sizeof(float) * 3 * 1e-9;
 
   float *d_a, *d_b, *d_c;
-  cudaCheck(cudaMalloc(&d_a, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_b, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_c, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_a, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_b, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_c, size * sizeof(float)));
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
 
   p_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args, func_name,
                gflops, gbytes);
 
-  cudaCheck(cudaFree(d_a));
-  cudaCheck(cudaFree(d_b));
-  cudaCheck(cudaFree(d_c));
+  hipCheck(hipFree(d_a));
+  hipCheck(hipFree(d_b));
+  hipCheck(hipFree(d_c));
 }
 
 void c_run_vadd(std::vector<float> &a, std::vector<float> &b,
@@ -53,22 +53,22 @@ void c_run_vadd(std::vector<float> &a, std::vector<float> &b,
   }
 
   float *d_a, *d_b, *d_c;
-  cudaCheck(cudaMalloc(&d_a, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_b, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_c, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_a, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_b, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_c, size * sizeof(float)));
 
-  cudaMemcpy(d_a, a.data(), size * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b, b.data(), size * sizeof(float), cudaMemcpyHostToDevice);
+  hipMemcpy(d_a, a.data(), size * sizeof(float), hipMemcpyHostToDevice);
+  hipMemcpy(d_b, b.data(), size * sizeof(float), hipMemcpyHostToDevice);
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
 
   c_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args);
 
-  cudaMemcpy(c.data(), d_c, size * sizeof(float), cudaMemcpyDeviceToHost);
+  hipMemcpy(c.data(), d_c, size * sizeof(float), hipMemcpyDeviceToHost);
 
-  cudaCheck(cudaFree(d_a));
-  cudaCheck(cudaFree(d_b));
-  cudaCheck(cudaFree(d_c));
+  hipCheck(hipFree(d_a));
+  hipCheck(hipFree(d_b));
+  hipCheck(hipFree(d_c));
 }
 
-} // namespace cuda
+} // namespace hip
