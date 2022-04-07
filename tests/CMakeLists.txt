@@ -1,0 +1,27 @@
+file(GLOB TESTS_SRC "./*.cpp")
+
+if(BUILD_CUDA)
+  foreach(testsourcefile ${TESTS_SRC})
+    get_filename_component(testsourcefile ${testsourcefile} NAME)
+    string(REPLACE ".cpp" "" testname cuda-${testsourcefile})
+    add_executable(${testname} ${testsourcefile})
+    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app
+                                                  ${CMAKE_SOURCE_DIR}/tests)
+    target_link_libraries(${testname} lib-cpu lib-cuda)
+    target_compile_options(${testname} PRIVATE -DBUILD_CUDA)
+    install(TARGETS ${testname} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  endforeach(testsourcefile ${TESTS_SRC})
+endif()
+
+if(BUILD_HIP)
+  foreach(testsourcefile ${TESTS_SRC})
+    get_filename_component(testsourcefile ${testsourcefile} NAME)
+    string(REPLACE ".cpp" "" testname hip-${testsourcefile})
+    add_executable(${testname} ${testsourcefile})
+    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app
+                                                  ${CMAKE_SOURCE_DIR}/tests)
+    target_link_libraries(${testname} lib-cpu lib-hip)
+    target_compile_options(${testname} PRIVATE -DBUILD_HIP)
+    install(TARGETS ${testname} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  endforeach(testsourcefile ${TESTS_SRC})
+endif()
