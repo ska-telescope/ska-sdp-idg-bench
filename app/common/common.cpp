@@ -48,7 +48,7 @@ void report(std::string name, double seconds, double gflops, double gbytes,
     double watt = joules / seconds;
     double efficiency = gflops / joules;
     std::cout << ", " << std::setw(w2) << watt << " W";
-    std::cout << ", " << std::setw(w2) << efficiency << " GFLOP/W";
+    std::cout << ", " << std::setw(w2) << efficiency << " GFLOP/s/W";
   }
   std::cout << std::endl;
 }
@@ -86,7 +86,7 @@ void report_csv(std::string name, std::string device_name,
       double watt = joules / seconds;
       double efficiency = gflops / joules;
       output << "W," << watt << "\n";
-      output << "GFLOP/W," << efficiency << "\n";
+      output << "GFLOP/s/W," << efficiency << "\n";
     }
     output.close();
   }
