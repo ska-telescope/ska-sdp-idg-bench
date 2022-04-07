@@ -91,7 +91,8 @@ template <typename T>
 void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
-  double seconds, avg_time, joules, avg_joules;
+  double avg_time, joules, avg_joules;
+  float seconds;
   std::vector<double> ex_joules, ex_time;
 #if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
@@ -99,9 +100,9 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   powersensor::State start, end;
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
-      powersensor::amdgpu::AMDGPUPowerSensor::create());
+      powersensor::amdgpu::AMDGPUPowerSensor::create(0));
   powersensor::State start,
-      end
+      end;
 #else
   hipEvent_t start, stop;
   hipCheck(hipEventCreate(&start));
@@ -128,7 +129,7 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
     hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
 
 #ifdef ENABLE_POWERSENSOR
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     end = powersensor->read();
     seconds = powersensor->seconds(start, end);
     joules = powersensor->Joules(start, end);
