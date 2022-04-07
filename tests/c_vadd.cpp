@@ -6,7 +6,7 @@
 #include "lib-hip.hpp"
 #endif
 
-#include "util.hpp"
+#include "test_util.hpp"
 
 int main() {
   std::cout << ">>> Correctness Vector Addition test" << std::endl;
