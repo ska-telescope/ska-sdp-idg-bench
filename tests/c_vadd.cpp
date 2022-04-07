@@ -1,27 +1,22 @@
 #include "lib-cpu.hpp"
+
+#if defined(BUILD_CUDA)
 #include "lib-cuda.hpp"
+#elif defined(BUILD_HIP)
+#include "lib-hip.hpp"
+#endif
 
-void fill_vector_rand(std::vector<float> &v) {
-  srand(time(0));
-  generate(v.begin(), v.end(), rand);
-}
-
-template <typename T> void print_vector(std::vector<T> v) {
-  for (const auto e : v) {
-    std::cout << e << std::endl;
-  }
-}
-
-template <typename T> std::vector<T> copy_vector(std::vector<T> &v) {
-  std::vector<T> vec(v);
-  return vec;
-}
+#include "util.hpp"
 
 int main() {
   std::cout << ">>> Correctness Vector Addition test" << std::endl;
+#if defined(BUILD_CUDA)
   cuda::extern_print_device_info();
   cuda::print_benchmark();
-
+#elif defined(BUILD_HIP)
+  hip::extern_print_device_info();
+  hip::print_benchmark();
+#endif
   int size = get_env_var("VADD_SIZE", 1000);
 
   std::cout << "Number of elements: " << size << std::endl;
@@ -37,7 +32,12 @@ int main() {
   gpu_b = copy_vector(cpu_b);
 
   cpu::c_run_vadd(cpu_a, cpu_b, cpu_c, size);
+
+#if defined(BUILD_CUDA)
   cuda::c_run_vadd(gpu_a, gpu_b, gpu_c, size);
+#elif defined(BUILD_HIP)
+  hip::c_run_vadd(gpu_a, gpu_b, gpu_c, size);
+#endif
 
   bool equal = true;
   for (int i = 0; i < size; i++) {

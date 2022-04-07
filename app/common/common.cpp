@@ -24,55 +24,6 @@ std::string get_env_var(const char *env_var, std::string default_value) {
   }
 }
 
-void print_stats(std::string title, std::vector<double> stats, int sel) {
-  std::vector<std::string> units = {"GFLOP", "GB"};
-
-  std::cout << std::fixed;
-  std::cout << std::setprecision(2);
-
-  std::cout << std::setw(6) << title << ": ";
-  std::cout << std::setw(8) << stats[0] << " (ms), ";
-
-  std::cout << std::setw(8) << stats[1];
-
-  if (sel != 0 && sel != 1) {
-    std::cerr << std::endl << "ERROR: Option not available" << std::endl;
-    exit(0);
-  }
-
-  std::string unit = " (" + units[sel] + "), ";
-  std::cout << std::setw(10) << unit;
-
-  std::cout << std::setw(9) << stats[2];
-  unit = " (" + units[sel] + "/s), ";
-  std::cout << std::setw(12) << unit;
-
-  std::cout << std::endl;
-}
-
-void print_t_stats(std::string title, double stat, int sel) {
-  std::vector<std::string> units = {"GFLOP", "GB"};
-
-  std::cout << std::fixed;
-  std::cout << std::setprecision(2);
-
-  std::cout << std::setw(6) << title << ": ";
-
-  if (sel != 0 && sel != 1) {
-    std::cerr << std::endl << "ERROR: Option not available" << std::endl;
-    exit(0);
-  }
-
-  std::string unit = " (" + units[sel] + "), ";
-  std::cout << std::setw(10) << unit;
-
-  std::cout << std::setw(9) << stat;
-  unit = " (" + units[sel] + "/s), ";
-  std::cout << std::setw(12) << unit;
-
-  std::cout << std::endl;
-}
-
 void report(std::string name, double seconds, double gflops, double gbytes,
             double mvis, double joules) {
   int w1 = 20;
