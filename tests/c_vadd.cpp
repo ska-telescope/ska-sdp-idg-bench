@@ -46,7 +46,8 @@ int main() {
       std::cout << "  Index " << i << " cpu_c = " << cpu_c[i]
                 << ", gpu_c = " << gpu_c[i] << std::endl;
       std::cout << ">>> Result NOT PASSED" << std::endl;
-      exit(-1);
+      equal = false;
+      break;
     }
   }
 
