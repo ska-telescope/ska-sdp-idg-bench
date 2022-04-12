@@ -2,22 +2,8 @@
 
 #include <cassert>
 
-#include "math.hpp"
+#include "parameters.hpp"
 #include "types.hpp"
-
-#define GRID_SIZE 1024
-#define NR_CORRELATIONS 4
-#define SUBGRID_SIZE 32
-#define IMAGE_SIZE 0.01f
-#define W_STEP 0
-#define NR_CHANNELS 16 // number of channels per subgrid
-#define NR_STATIONS 10
-#define NR_TIMESLOTS 2
-#define NR_TIMESTEPS_SUBGRID 128 // number of timesteps per subgrid
-#define NR_TIMESTEPS                                                           \
-  (NR_TIMESTEPS_SUBGRID * NR_TIMESLOTS) // number of timesteps per baseline
-#define NR_BASELINES ((NR_STATIONS * (NR_STATIONS - 1)) / 2)
-#define NR_SUBGRIDS (NR_BASELINES * NR_TIMESLOTS)
 
 void initialize_uvw(unsigned int grid_size,
                     idg::Array2D<idg::UVWCoordinate<float>> &uvw);

@@ -101,8 +101,7 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::amdgpu::AMDGPUPowerSensor::create(0));
-  powersensor::State start,
-      end;
+  powersensor::State start, end;
 #else
   hipEvent_t start, stop;
   hipCheck(hipEventCreate(&start));

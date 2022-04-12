@@ -4,8 +4,9 @@ file(GLOB cuda-sources "./kernels/*.cu" "./*cu")
 
 add_library(${PROJECT_NAME} SHARED ${cuda-sources})
 include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/app
-                    ${CMAKE_SOURCE_DIR}/app/CUDA)
+                    ${CMAKE_SOURCE_DIR}/app/CUDA ${CMAKE_SOURCE_DIR}/app/common)
 target_link_libraries(${PROJECT_NAME} PUBLIC lib-common)
+target_compile_options(${PROJECT_NAME} PRIVATE -DFUNCTION_ATTRIBUTES=__device__)
 if(BUILD_LIBPOWERSENSOR)
   target_compile_options(${PROJECT_NAME} PRIVATE -DENABLE_POWERSENSOR)
   target_link_libraries(${PROJECT_NAME} PUBLIC powersensor)

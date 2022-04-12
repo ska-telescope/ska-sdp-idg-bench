@@ -1,4 +1,5 @@
 #include "init.hpp"
+#include "math.hpp"
 
 void initialize_uvw(unsigned int grid_size,
                     idg::Array2D<idg::UVWCoordinate<float>> &uvw) {

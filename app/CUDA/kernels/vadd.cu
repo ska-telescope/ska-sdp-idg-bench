@@ -1,7 +1,7 @@
 #include "util.cuh"
 
 namespace cuda {
-  
+
 __global__ void kernel_vadd(float *a, float *b, float *c, int size) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -53,18 +53,18 @@ void c_run_vadd(std::vector<float> &a, std::vector<float> &b,
   }
 
   float *d_a, *d_b, *d_c;
-  cudaCheck(cudaMalloc(&d_a, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_b, size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_c, size * sizeof(float)));
+  cudaCheck(cudaMalloc(&d_a, a.size() * sizeof(float)));
+  cudaCheck(cudaMalloc(&d_b, b.size() * sizeof(float)));
+  cudaCheck(cudaMalloc(&d_c, c.size() * sizeof(float)));
 
-  cudaMemcpy(d_a, a.data(), size * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b, b.data(), size * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_a, a.data(), a.size() * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_b, b.data(), b.size() * sizeof(float), cudaMemcpyHostToDevice);
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
 
   c_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args);
 
-  cudaMemcpy(c.data(), d_c, size * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(c.data(), d_c, c.size() * sizeof(float), cudaMemcpyDeviceToHost);
 
   cudaCheck(cudaFree(d_a));
   cudaCheck(cudaFree(d_b));

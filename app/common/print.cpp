@@ -1,5 +1,64 @@
 #include "print.hpp"
 
+void print_parameters(int nr_stations, int nr_channels, int nr_timesteps,
+                      int nr_correlations, int nr_timeslots, float image_size,
+                      int grid_size, int subgrid_size, float w_step,
+                      int nr_baselines, int nr_subgrids,
+                      int total_nr_timesteps) {
+  const int fw1 = 30;
+  const int fw2 = 10;
+
+  std::cout << "-----------" << std::endl;
+  std::cout << "PARAMETERS:" << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of stations"
+            << "== " << std::setw(fw2) << std::right << nr_stations
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of channels"
+            << "== " << std::setw(fw2) << std::right << nr_channels
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of timesteps"
+            << "== " << std::setw(fw2) << std::right << nr_timesteps
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of correlations"
+            << "== " << std::setw(fw2) << std::right << nr_correlations
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of timeslots"
+            << "== " << std::setw(fw2) << std::right << nr_timeslots
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Imagesize"
+            << "== " << std::setw(fw2) << std::right << image_size << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Grid size"
+            << "== " << std::setw(fw2) << std::right << grid_size << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Subgrid size"
+            << "== " << std::setw(fw2) << std::right << subgrid_size
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "W step size"
+            << "== " << std::setw(fw2) << std::right << w_step << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of baselines"
+            << "== " << std::setw(fw2) << std::right << nr_baselines
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Number of subgrids"
+            << "== " << std::setw(fw2) << std::right << nr_subgrids
+            << std::endl;
+
+  std::cout << std::setw(fw1) << std::left << "Total number of timesteps"
+            << "== " << std::setw(fw2) << std::right << total_nr_timesteps
+            << std::endl;
+
+  std::cout << "-----------" << std::endl;
+}
+
 void print_subgrid_diff(idg::Array4D<std::complex<float>> &subgrids1,
                         idg::Array4D<std::complex<float>> &subgrids2,
                         unsigned i) {

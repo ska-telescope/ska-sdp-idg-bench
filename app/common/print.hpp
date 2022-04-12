@@ -42,6 +42,12 @@ private:
   std::streamsize precision;
 };
 
+void print_parameters(int nr_stations, int nr_channels, int nr_timesteps,
+                      int nr_correlations, int nr_timeslots, float image_size,
+                      int grid_size, int subgrid_size, float w_step,
+                      int nr_baselines, int nr_subgrids,
+                      int total_nr_timesteps);
+
 void print_subgrid_diff(idg::Array4D<std::complex<float>> &subgrids1,
                         idg::Array4D<std::complex<float>> &subgrids2,
                         unsigned i);
