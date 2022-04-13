@@ -123,7 +123,7 @@ void p_run_gridder_reference() {
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
   int nr_stations = get_env_var("NR_STATIONS", 20);
-  int nr_timeslots = get_env_var("NR_TIMESLOTS", 20);
+  int nr_timeslots = get_env_var("NR_TIMESLOTS", 4);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
 

@@ -32,7 +32,7 @@ void p_run_vadd() {
   hipCheck(hipMalloc(&d_c, size * sizeof(float)));
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
-
+std::cout << "HERE" << std::endl;
   p_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args, func_name,
                gflops, gbytes);
 
