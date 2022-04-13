@@ -20,6 +20,8 @@ include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/app
                     ${CMAKE_SOURCE_DIR}/app/HIP)
 add_library(${PROJECT_NAME} SHARED ${hip-sources})
 
+target_compile_options(${PROJECT_NAME} PRIVATE -DFUNCTION_ATTRIBUTES=__device__)
+
 if(BUILD_LIBPOWERSENSOR)
   target_compile_options(${PROJECT_NAME} PRIVATE -DENABLE_POWERSENSOR)
   target_link_libraries(${PROJECT_NAME} PUBLIC powersensor)

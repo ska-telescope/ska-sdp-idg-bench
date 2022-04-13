@@ -1,8 +1,9 @@
 #include "../common/math.hpp"
-#include "math.cuh"
-#include "util.cuh"
+#include "hip/hip_runtime.h"
+#include "math.hip.hpp"
+#include "util.hip.hpp"
 
-namespace cuda {
+namespace hip {
 
 __global__ void kernel_gridder_reference(
     const int grid_size, int subgrid_size, float image_size,
@@ -157,22 +158,21 @@ void p_run_gridder_reference() {
   initialize_metadata(grid_size, nr_timeslots, nr_timesteps, nr_baselines,
                       metadata);
 
-  cudaCheck(cudaMalloc(&d_uvw,
-                       3 * nr_baselines * total_nr_timesteps * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
-  cudaCheck(
-      cudaMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
-                                            nr_channels * sizeof(float2)));
-  cudaCheck(cudaMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
+  hipCheck(
+      hipMalloc(&d_uvw, 3 * nr_baselines * total_nr_timesteps * sizeof(float)));
+  hipCheck(hipMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
+  hipCheck(
+      hipMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
+  hipCheck(hipMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
+                                          nr_channels * sizeof(float2)));
+  hipCheck(hipMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
+                                    subgrid_size * sizeof(float2)));
+  hipCheck(hipMalloc(&d_subgrids, nr_subgrids * nr_correlations * subgrid_size *
                                       subgrid_size * sizeof(float2)));
-  cudaCheck(cudaMalloc(&d_subgrids, nr_subgrids * nr_correlations *
-                                        subgrid_size * subgrid_size *
-                                        sizeof(float2)));
-  cudaCheck(cudaMalloc(&d_metadata, metadata.bytes()));
+  hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-  cudaMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             cudaMemcpyHostToDevice);
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+            hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -183,13 +183,13 @@ void p_run_gridder_reference() {
   p_run_kernel((void *)kernel_gridder_reference, dim3(dim[0]), dim3(dim[1]),
                args, func_name, gflops, gbytes);
 
-  cudaCheck(cudaFree(d_uvw));
-  cudaCheck(cudaFree(d_wavenumbers));
-  cudaCheck(cudaFree(d_spheroidal));
-  cudaCheck(cudaFree(d_visibilities));
-  cudaCheck(cudaFree(d_aterms));
-  cudaCheck(cudaFree(d_metadata));
-  cudaCheck(cudaFree(d_subgrids));
+  hipCheck(hipFree(d_uvw));
+  hipCheck(hipFree(d_wavenumbers));
+  hipCheck(hipFree(d_spheroidal));
+  hipCheck(hipFree(d_visibilities));
+  hipCheck(hipFree(d_aterms));
+  hipCheck(hipFree(d_metadata));
+  hipCheck(hipFree(d_subgrids));
 }
 
 void c_run_gridder_reference(
@@ -210,24 +210,24 @@ void c_run_gridder_reference(
   float2 *d_visibilities, *d_aterms, *d_subgrids;
   idg::Metadata *d_metadata;
 
-  cudaCheck(cudaMalloc(&d_uvw, uvw.bytes()));
-  cudaCheck(cudaMalloc(&d_wavenumbers, wavenumbers.bytes()));
-  cudaCheck(cudaMalloc(&d_spheroidal, spheroidal.bytes()));
-  cudaCheck(cudaMalloc(&d_visibilities, visibilities.bytes()));
-  cudaCheck(cudaMalloc(&d_aterms, aterms.bytes()));
-  cudaCheck(cudaMalloc(&d_subgrids, subgrids.bytes()));
-  cudaCheck(cudaMalloc(&d_metadata, metadata.bytes()));
+  hipCheck(hipMalloc(&d_uvw, uvw.bytes()));
+  hipCheck(hipMalloc(&d_wavenumbers, wavenumbers.bytes()));
+  hipCheck(hipMalloc(&d_spheroidal, spheroidal.bytes()));
+  hipCheck(hipMalloc(&d_visibilities, visibilities.bytes()));
+  hipCheck(hipMalloc(&d_aterms, aterms.bytes()));
+  hipCheck(hipMalloc(&d_subgrids, subgrids.bytes()));
+  hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-  cudaMemcpy(d_uvw, uvw.data(), uvw.bytes(), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
-             cudaMemcpyHostToDevice);
-  cudaMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
-             cudaMemcpyHostToDevice);
-  cudaMemcpy(d_visibilities, visibilities.data(), visibilities.bytes(),
-             cudaMemcpyHostToDevice);
-  cudaMemcpy(d_aterms, aterms.data(), aterms.bytes(), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             cudaMemcpyHostToDevice);
+  hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
+            hipMemcpyHostToDevice);
+  hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
+            hipMemcpyHostToDevice);
+  hipMemcpy(d_visibilities, visibilities.data(), visibilities.bytes(),
+            hipMemcpyHostToDevice);
+  hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+            hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -238,17 +238,17 @@ void c_run_gridder_reference(
   c_run_kernel((void *)kernel_gridder_reference, dim3(dim[0]), dim3(dim[1]),
                args);
 
-  cudaMemcpy(subgrids.data(), d_subgrids,
-             subgrids.size() * sizeof(std::complex<float>),
-             cudaMemcpyDeviceToHost);
+  hipMemcpy(subgrids.data(), d_subgrids,
+            subgrids.size() * sizeof(std::complex<float>),
+            hipMemcpyDeviceToHost);
 
-  cudaCheck(cudaFree(d_uvw));
-  cudaCheck(cudaFree(d_wavenumbers));
-  cudaCheck(cudaFree(d_spheroidal));
-  cudaCheck(cudaFree(d_visibilities));
-  cudaCheck(cudaFree(d_aterms));
-  cudaCheck(cudaFree(d_metadata));
-  cudaCheck(cudaFree(d_subgrids));
+  hipCheck(hipFree(d_uvw));
+  hipCheck(hipFree(d_wavenumbers));
+  hipCheck(hipFree(d_spheroidal));
+  hipCheck(hipFree(d_visibilities));
+  hipCheck(hipFree(d_aterms));
+  hipCheck(hipFree(d_metadata));
+  hipCheck(hipFree(d_subgrids));
 }
 
-} // namespace cuda
+} // namespace hip

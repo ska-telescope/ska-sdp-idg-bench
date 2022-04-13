@@ -9,7 +9,7 @@
 #include "test_util.hpp"
 
 int main() {
-  std::cout << ">>> Correctness IDG-Gridding test" << std::endl;
+  std::cout << ">>> Correctness IDG-Gridder test" << std::endl;
 #if defined(BUILD_CUDA)
   cuda::extern_print_device_info();
   cuda::print_benchmark();
@@ -85,7 +85,10 @@ int main() {
                                 uvw, wavenumbers, visibilities, spheroidal,
                                 aterms, metadata, gpu_subgrids);
 #elif defined(BUILD_HIP)
-// run HIP test
+  hip::c_run_gridder_reference(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
+                               W_STEP, nr_channels, nr_stations, uvw,
+                               wavenumbers, visibilities, spheroidal, aterms,
+                               metadata, gpu_subgrids);
 #endif
 
   // check algorithm correctness (check subgrid values)

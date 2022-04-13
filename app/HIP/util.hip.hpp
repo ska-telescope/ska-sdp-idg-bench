@@ -137,8 +137,10 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
     hipCheck(hipEventRecord(stop));
 
     hipCheck(hipEventSynchronize(stop));
+    float milliseconds = 0;
     hipCheck(hipEventElapsedTime(&seconds, start, stop));
-    seconds *= 1e-3;
+    seconds = milliseconds * 1e-3;
+
 #endif
     ex_time.push_back(seconds);
   }

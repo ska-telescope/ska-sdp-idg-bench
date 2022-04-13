@@ -105,13 +105,13 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   int nr_warm_up_runs = get_env_var("NR_WARM_UP_RUNS", 2);
   int nr_iterations = get_env_var("NR_ITERATIONS", 5);
 
-  //#ifdef DEBUG
+#ifdef DEBUG
   print_device_info();
   print_dimensions(gridDim, blockDim);
 
   std::cout << "NR_WARM_UP_RUNS: " << nr_warm_up_runs << std::endl;
   std::cout << "NR_ITERATIONS: " << nr_iterations << std::endl;
-  //#endif
+#endif
 
   for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
 #ifdef ENABLE_POWERSENSOR
