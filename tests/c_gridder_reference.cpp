@@ -18,8 +18,6 @@ int main() {
   hip::print_benchmark();
 #endif
 
-  // get_env parameters?
-
   // print IDG parameters?
   int nr_correlations = get_env_var("NR_CORRELATIONS", 4);
   int grid_size = get_env_var("GRID_SIZE", 1024);
@@ -36,8 +34,6 @@ int main() {
   print_parameters(nr_stations, nr_channels, nr_timesteps, nr_correlations,
                    nr_timeslots, IMAGE_SIZE, grid_size, subgrid_size, W_STEP,
                    nr_baselines, nr_subgrids, total_nr_timesteps);
-
-  // initialize cpu and gpu vectors
 
   // Allocate data structures on host
   std::cout << ">>> Allocate data structures on host" << std::endl;
@@ -92,20 +88,5 @@ int main() {
 #endif
 
   // check algorithm correctness (check subgrid values)
-  bool equal = true;
-
-  for (int i = 0; i < cpu_subgrids.size(); i++) {
-    std::complex<float> diff = cpu_subgrids.data()[i] - gpu_subgrids.data()[i];
-    if (abs(diff.real()) > 1e-2 || abs(diff.imag()) > 1e-2) {
-      std::cout << "[" << i << "]: " << cpu_subgrids.data()[i]
-                << " != " << gpu_subgrids.data()[i] << std::endl;
-      std::cout << "diff: " << diff << std::endl;
-      equal = false;
-      // break;
-    }
-  }
-
-  if (equal) {
-    std::cout << ">>> Result PASSED" << std::endl;
-  }
+  compare_subgrids(cpu_subgrids, gpu_subgrids);
 }
