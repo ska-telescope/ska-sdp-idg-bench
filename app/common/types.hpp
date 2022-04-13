@@ -32,6 +32,15 @@ template <class T> struct Matrix2x2 {
   T yy;
 };
 
+template <class T> Matrix2x2<T> operator-(Matrix2x2<T> a, Matrix2x2<T> b) {
+  Matrix2x2<T> res;
+  res.xx = a.xx - b.xx;
+  res.xy = a.xy - b.xy;
+  res.yx = a.yx - b.yx;
+  res.yy = a.yy - b.yy;
+  return res;
+}
+
 template <class T> using Visibility = Matrix2x2<T>;
 
 template <class T> struct UVWCoordinate {

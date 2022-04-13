@@ -8,33 +8,6 @@
 
 #include "test_util.hpp"
 
-void compare_visibilities(
-    idg::Array3D<idg::Visibility<std::complex<float>>> &cpu_visibilities,
-    idg::Array3D<idg::Visibility<std::complex<float>>> &gpu_visibilities) {
-  bool equal = true;
-
-  std::complex<float> *cast_cpu_visibilities =
-      (std::complex<float> *)cpu_visibilities.data();
-  std::complex<float> *cast_gpu_visibilities =
-      (std::complex<float> *)gpu_visibilities.data();
-
-  for (int i = 0; i < cpu_visibilities.bytes() / 4; i++) {
-    std::complex<float> diff =
-        cast_cpu_visibilities[i] - cast_gpu_visibilities[i];
-    if (abs(diff.real()) > 1e-2 || abs(diff.imag()) > 1e-2) {
-      std::cout << "[" << i << "]: " << cast_cpu_visibilities[i]
-                << " != " << cast_gpu_visibilities[i] << std::endl;
-      std::cout << "diff: " << diff << std::endl;
-      equal = false;
-      break;
-    }
-  }
-
-  if (equal) {
-    std::cout << ">>> Result PASSED" << std::endl;
-  }
-}
-
 int main() {
   std::cout << ">>> Correctness IDG-Degridder test" << std::endl;
 #if defined(BUILD_CUDA)
@@ -102,18 +75,18 @@ int main() {
                                  IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
                                  uvw, wavenumbers, cpu_visibilities, spheroidal,
                                  aterms, metadata, subgrids);
-
-#if defined(BUILD_CUDA)  /*                                                     \
-    cuda::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,       \
-                                  IMAGE_SIZE, W_STEP, nr_channels, nr_stations, \
-                                  uvw, wavenumbers, gpu_visibilities,           \
-    spheroidal,  aterms, metadata, subgrids);*/
-#elif defined(BUILD_HIP) /*                                                    \
-   hip::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,        \
-   IMAGE_SIZE, W_STEP, nr_channels, nr_stations, uvw, wavenumbers,                                                                  \
-   gpu_visibilities, spheroidal, aterms, metadata, subgrids);*/
+  std::cout << ">>> Run on gpu" << std::endl;
+#if defined(BUILD_CUDA)
+  cuda::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
+                                  IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
+                                  uvw, wavenumbers, gpu_visibilities,
+                                  spheroidal, aterms, metadata, subgrids);
+#elif defined(BUILD_HIP)
+  /*hip::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
+  IMAGE_SIZE, W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
+  gpu_visibilities, spheroidal, aterms, metadata, subgrids);*/
 #endif
-
+  std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check visibilities values)
   compare_visibilities(cpu_visibilities, gpu_visibilities);
 }
