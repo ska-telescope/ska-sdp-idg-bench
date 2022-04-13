@@ -6,7 +6,7 @@
 #if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
 #include <powersensor/NVMLPowerSensor.h>
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
-#include <powersensor/AMDGPUPowerSensor.h>
+#include <powersensor/ROCMPowerSensor.h>
 #endif
 
 namespace hip {
@@ -100,7 +100,7 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   powersensor::State start, end;
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
-      powersensor::amdgpu::AMDGPUPowerSensor::create(0));
+      powersensor::rocm::ROCMPowerSensor::create(0));
   powersensor::State start, end;
 #else
   hipEvent_t start, stop;
