@@ -13,7 +13,7 @@ if(BUILD_LIBPOWERSENSOR)
       ${CMAKE_SOURCE_DIR}/external/libpowersensor)
   ExternalProject_Add(
     libpowersensor
-    GIT_REPOSITORY https://gitlab.com/astron-misc/libpowersensor
+    GIT_REPOSITORY https://gitlab.com/astron-misc/libpowersensor.git
     GIT_TAG master
     # add other arguments if needed such as build with CUDA and find the
     # necessary packages above such as FFTW
