@@ -82,9 +82,10 @@ int main() {
                                   uvw, wavenumbers, gpu_visibilities,
                                   spheroidal, aterms, metadata, subgrids);
 #elif defined(BUILD_HIP)
-  /*hip::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
-  IMAGE_SIZE, W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
-  gpu_visibilities, spheroidal, aterms, metadata, subgrids);*/
+  hip::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
+                                 IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
+                                 uvw, wavenumbers, gpu_visibilities, spheroidal,
+                                 aterms, metadata, subgrids);
 #endif
   std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check visibilities values)
