@@ -14,6 +14,8 @@ cd ska-sdp-idg-bench
 
 Make sure to have CUDA/HIP support on your system.
 Please follow this [guidelines](https://git.astron.nl/RD/schaap-spack/-/wikis/Reproducible-SW-environment-with-Spack).
+On NVIDIA systems the modules to load are: `cuda`, `cmake` and `hip`.
+On AMD systems: `llvm-amdgpu`, `hip`, `cmake`, `hip-rocclr`, `rocm-smi-lib`.
 
 Source the setup file in the **share** folder:
 
