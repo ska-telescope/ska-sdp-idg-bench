@@ -13,7 +13,7 @@ int main() {
 
   extern_print_device_info();
   print_benchmark();
-#if defined(BUILD_CUDA) //|| defined(BUILD_HIP)
+#if defined(BUILD_CUDA) || defined(BUILD_HIP)
   p_run_gridder_v1();
 #endif
 }

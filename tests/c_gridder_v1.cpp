@@ -81,7 +81,7 @@ int main() {
                                 uvw, wavenumbers, visibilities, spheroidal,
                                 aterms, metadata, gpu_subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_gridder_reference(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
+  hip::c_run_gridder_v1(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
                                W_STEP, nr_channels, nr_stations, uvw,
                                wavenumbers, visibilities, spheroidal, aterms,
                                metadata, gpu_subgrids);
