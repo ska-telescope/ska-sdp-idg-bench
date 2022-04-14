@@ -35,8 +35,6 @@ int main() {
                    nr_timeslots, IMAGE_SIZE, grid_size, subgrid_size, W_STEP,
                    nr_baselines, nr_subgrids, total_nr_timesteps);
 
-  // initialize cpu and gpu vectors
-
   // Allocate data structures on host
   std::cout << ">>> Allocate data structures on host" << std::endl;
   idg::Array2D<idg::UVWCoordinate<float>> uvw(nr_baselines, total_nr_timesteps);
@@ -87,6 +85,7 @@ int main() {
                                  uvw, wavenumbers, gpu_visibilities, spheroidal,
                                  aterms, metadata, subgrids);
 #endif
+
   std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check visibilities values)
   compare_visibilities(cpu_visibilities, gpu_visibilities);

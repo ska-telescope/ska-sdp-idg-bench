@@ -37,5 +37,4 @@ void c_run_degridder_reference(
     idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids);
-
 } // namespace cuda

@@ -87,6 +87,7 @@ int main() {
                                metadata, gpu_subgrids);
 #endif
 
+   std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check subgrid values)
   compare_subgrids(cpu_subgrids, gpu_subgrids);
 }
