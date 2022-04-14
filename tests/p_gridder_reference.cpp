@@ -9,11 +9,11 @@ using namespace hip;
 #endif
 
 int main() {
-  std::cout << ">>> Performance Vector Addition test" << std::endl;
+  std::cout << ">>> Performance IDG-Gridder test" << std::endl;
 
   extern_print_device_info();
   print_benchmark();
 #if defined(BUILD_CUDA) || defined(BUILD_HIP)
-  p_run_vadd();
+  p_run_gridder_reference();
 #endif
 }

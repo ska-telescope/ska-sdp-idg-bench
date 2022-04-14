@@ -32,7 +32,7 @@ void p_run_vadd() {
   hipCheck(hipMalloc(&d_c, size * sizeof(float)));
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
-
+std::cout << "HERE" << std::endl;
   p_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args, func_name,
                gflops, gbytes);
 
@@ -53,18 +53,18 @@ void c_run_vadd(std::vector<float> &a, std::vector<float> &b,
   }
 
   float *d_a, *d_b, *d_c;
-  hipCheck(hipMalloc(&d_a, size * sizeof(float)));
-  hipCheck(hipMalloc(&d_b, size * sizeof(float)));
-  hipCheck(hipMalloc(&d_c, size * sizeof(float)));
+  hipCheck(hipMalloc(&d_a, a.size() * sizeof(float)));
+  hipCheck(hipMalloc(&d_b, b.size() * sizeof(float)));
+  hipCheck(hipMalloc(&d_c, c.size() * sizeof(float)));
 
-  hipMemcpy(d_a, a.data(), size * sizeof(float), hipMemcpyHostToDevice);
-  hipMemcpy(d_b, b.data(), size * sizeof(float), hipMemcpyHostToDevice);
+  hipMemcpy(d_a, a.data(), a.size() * sizeof(float), hipMemcpyHostToDevice);
+  hipMemcpy(d_b, b.data(), b.size() * sizeof(float), hipMemcpyHostToDevice);
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
 
   c_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args);
 
-  hipMemcpy(c.data(), d_c, size * sizeof(float), hipMemcpyDeviceToHost);
+  hipMemcpy(c.data(), d_c, c.size() * sizeof(float), hipMemcpyDeviceToHost);
 
   hipCheck(hipFree(d_a));
   hipCheck(hipFree(d_b));

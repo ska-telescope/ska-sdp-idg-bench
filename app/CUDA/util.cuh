@@ -89,7 +89,8 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
 
-  double seconds, avg_time, joules, avg_joules;
+  float seconds;
+  double avg_time, joules, avg_joules;
   std::vector<double> ex_joules, ex_time;
 #ifdef ENABLE_POWERSENSOR
   std::unique_ptr<powersensor::PowerSensor> powersensor(
@@ -130,8 +131,10 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
     cudaCheck(cudaEventRecord(stop));
 
     cudaCheck(cudaEventSynchronize(stop));
-    cudaCheck(cudaEventElapsedTime(&seconds, start, stop));
-    seconds *= 1e-3;
+
+    float milliseconds = 0;
+    cudaCheck(cudaEventElapsedTime(&milliseconds, start, stop));
+    seconds = milliseconds * 1e-3;
 #endif
     ex_time.push_back(seconds);
   }
@@ -158,7 +161,6 @@ void c_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args) {
   print_device_info();
   print_dimensions(gridDim, blockDim);
 #endif
-
   cudaLaunchKernel(func, gridDim, blockDim, args);
 }
 
