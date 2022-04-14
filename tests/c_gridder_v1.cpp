@@ -76,18 +76,18 @@ int main() {
                                metadata, cpu_subgrids);
 
 #if defined(BUILD_CUDA)
-  cuda::c_run_gridder_v1(nr_subgrids, grid_size, subgrid_size,
-                                IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
-                                uvw, wavenumbers, visibilities, spheroidal,
-                                aterms, metadata, gpu_subgrids);
+  cuda::c_run_gridder_v1(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
+                         W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
+                         visibilities, spheroidal, aterms, metadata,
+                         gpu_subgrids);
 #elif defined(BUILD_HIP)
   hip::c_run_gridder_v1(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
-                               W_STEP, nr_channels, nr_stations, uvw,
-                               wavenumbers, visibilities, spheroidal, aterms,
-                               metadata, gpu_subgrids);
+                        W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
+                        visibilities, spheroidal, aterms, metadata,
+                        gpu_subgrids);
 #endif
 
-   std::cout << ">>> Checking" << std::endl;
+  std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check subgrid values)
   compare_subgrids(cpu_subgrids, gpu_subgrids);
 }
