@@ -2,21 +2,6 @@
 #include "math.cuh"
 #include "util.cuh"
 
-inline __device__ float raw_sin(float a)
-{
-    float r;
-    asm ("sin.approx.ftz.f32 %0,%1;" : "=f"(r) : "f"(a));
-    return r;
-}
-
-inline __device__ float raw_cos(float a)
-{
-    float r;
-    asm ("cos.approx.ftz.f32 %0,%1;" : "=f"(r) : "f"(a));
-    return r;
-}
-
-
 namespace cuda {
 
 __global__ void kernel_gridder_v1(
