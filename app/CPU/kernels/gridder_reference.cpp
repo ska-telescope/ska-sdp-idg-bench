@@ -17,7 +17,7 @@ void kernel_gridder_reference(int nr_subgrids, int grid_size, int subgrid_size,
   const int baseline_offset_1 = m.baseline_offset;
 
 // Iterate all subgrids
-#pragma omp parallel for
+//#pragma omp parallel for
   for (int s = 0; s < nr_subgrids; s++) {
     // Load metadata
     const idg::Metadata m = metadata[s];

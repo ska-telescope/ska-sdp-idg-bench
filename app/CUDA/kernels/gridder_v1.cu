@@ -2,10 +2,25 @@
 #include "math.cuh"
 #include "util.cuh"
 
+inline __device__ float raw_sin(float a)
+{
+    float r;
+    asm ("sin.approx.ftz.f32 %0,%1;" : "=f"(r) : "f"(a));
+    return r;
+}
+
+inline __device__ float raw_cos(float a)
+{
+    float r;
+    asm ("cos.approx.ftz.f32 %0,%1;" : "=f"(r) : "f"(a));
+    return r;
+}
+
+
 namespace cuda {
 
-__global__ void kernel_gridder_reference(
-    const int grid_size, int subgrid_size, float image_size,
+__global__ void kernel_gridder_v1(
+   const int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, // channel_offset? for the macro?
     int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
     float2 *visibilities, float *spheroidal, float2 *aterms,
@@ -40,12 +55,15 @@ __global__ void kernel_gridder_reference(
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all pixels in subgrid
-  for (int y = 0; y < subgrid_size; y++) {
-    for (int x = 0; x < subgrid_size; x++) {
+  for (int i = tid; i < subgrid_size*subgrid_size; i+=nr_threads) {
+    //for (int x = 0; x < subgrid_size; x++) {
       // Initialize pixel for every polarization
+      int x = i%subgrid_size;
+      int y = i/subgrid_size;
+
       float2 pixels[NR_CORRELATIONS];
-      for (int i = 0; i < NR_CORRELATIONS; i++) {
-        pixels[i] = make_float2(0, 0);
+      for (int k = 0; k < NR_CORRELATIONS; k++) {
+        pixels[k] = make_float2(0, 0);
       }
 
       // Compute l,m,n
@@ -110,11 +128,11 @@ __global__ void kernel_gridder_reference(
             pol * subgrid_size * subgrid_size + y * subgrid_size + x;
         subgrids[idx_subgrid] = pixels[pol] * sph;
       }
-    }
+   // }
   }
 }
 
-void p_run_gridder_reference() {
+void p_run_gridder_v1() {
 
   float image_size = IMAGE_SIZE;
   float w_step_in_lambda = W_STEP;
@@ -123,7 +141,7 @@ void p_run_gridder_reference() {
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
   int nr_stations = get_env_var("NR_STATIONS", 20);
-  int nr_timeslots = get_env_var("NR_TIMESLOTS", 4);
+  int nr_timeslots = get_env_var("NR_TIMESLOTS", 20);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
 
@@ -136,7 +154,7 @@ void p_run_gridder_reference() {
                    w_step_in_lambda, nr_baselines, nr_subgrids,
                    total_nr_timesteps);
 
-  std::string func_name = "gridder_reference";
+  std::string func_name = "gridder_reference_v1";
   auto gflops =
       1e-9 * flops_gridder(nr_channels, total_nr_timesteps, nr_subgrids,
                            subgrid_size, nr_correlations);
@@ -145,7 +163,7 @@ void p_run_gridder_reference() {
                            subgrid_size, nr_correlations);
   auto mvis = 1e-6 * total_nr_timesteps * nr_channels;
 
-  std::vector<int> dim = {nr_subgrids, 1};
+  std::vector<int> dim = {nr_subgrids, 128};
 
   idg::Array1D<idg::Metadata> metadata(nr_subgrids);
 
@@ -179,7 +197,7 @@ void p_run_gridder_reference() {
       &d_visibilities, &d_spheroidal, &d_aterms,   &d_metadata,
       &d_subgrids};
 
-  p_run_kernel((void *)kernel_gridder_reference, dim3(dim[0]), dim3(dim[1]),
+  p_run_kernel((void *)kernel_gridder_v1, dim3(dim[0]), dim3(dim[1]),
                args, func_name, gflops, gbytes);
 
   cudaCheck(cudaFree(d_uvw));
@@ -191,7 +209,7 @@ void p_run_gridder_reference() {
   cudaCheck(cudaFree(d_subgrids));
 }
 
-void c_run_gridder_reference(
+void c_run_gridder_v1(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -234,7 +252,7 @@ void c_run_gridder_reference(
       &d_visibilities, &d_spheroidal, &d_aterms,   &d_metadata,
       &d_subgrids};
 
-  c_run_kernel((void *)kernel_gridder_reference, dim3(dim[0]), dim3(dim[1]),
+  c_run_kernel((void *)kernel_gridder_v1, dim3(dim[0]), dim3(dim[1]),
                args);
 
   cudaMemcpy(subgrids.data(), d_subgrids, subgrids.bytes(),
