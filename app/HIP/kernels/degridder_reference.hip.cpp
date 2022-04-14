@@ -118,7 +118,7 @@ __global__ void kernel_degridder_reference(
           float phase = (phase_index * wavenumbers[chan]) - phase_offset;
 
           // Compute phasor
-          float2 phasor = make_float2(cos(phase), sin(phase));
+          float2 phasor = make_float2(cosf(phase), sinf(phase));
 
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
             sum[pol] += pixels[y][x][pol] * phasor;

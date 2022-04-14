@@ -71,7 +71,7 @@ __global__ void kernel_gridder_reference(
           float phase = phase_offset - (phase_index * wavenumbers[chan]);
 
           // Compute phasor
-          float2 phasor = make_float2(cos(phase), sin(phase));
+          float2 phasor = make_float2(cosf(phase), sinf(phase));
 
           // Update pixel for every polarization
 
