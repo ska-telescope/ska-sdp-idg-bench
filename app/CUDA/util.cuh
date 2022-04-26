@@ -207,12 +207,12 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
                       metadata);
 
   cudaCheck(cudaMalloc(&d_uvw,
-                       3 * nr_baselines * total_nr_timesteps * sizeof(float)));
+                       3 * nr_subgrids * nr_timesteps * sizeof(float)));
   cudaCheck(cudaMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   cudaCheck(
       cudaMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
-                                            nr_channels * sizeof(float2)));
+  cudaCheck(cudaMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
+                                            nr_channels * nr_correlations * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
                                       subgrid_size * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_subgrids, nr_subgrids * nr_correlations *
@@ -343,11 +343,11 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
                       metadata);
 
   cudaCheck(cudaMalloc(&d_uvw,
-                       3 * nr_baselines * total_nr_timesteps * sizeof(float)));
+                       3 * nr_subgrids * nr_timesteps * sizeof(float)));
   cudaCheck(cudaMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   cudaCheck(
       cudaMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
-  cudaCheck(cudaMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
+  cudaCheck(cudaMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
                                             nr_channels * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
                                       subgrid_size * sizeof(float2)));

@@ -214,11 +214,11 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
                       metadata);
 
   hipCheck(
-      hipMalloc(&d_uvw, 3 * nr_baselines * total_nr_timesteps * sizeof(float)));
+      hipMalloc(&d_uvw, 3 * nr_subgrids * nr_timesteps * sizeof(float)));
   hipCheck(hipMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   hipCheck(
       hipMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
-  hipCheck(hipMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
+  hipCheck(hipMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
                                           nr_channels * sizeof(float2)));
   hipCheck(hipMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
                                     subgrid_size * sizeof(float2)));
@@ -350,11 +350,11 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
                       metadata);
 
   hipCheck(
-      hipMalloc(&d_uvw, 3 * nr_baselines * total_nr_timesteps * sizeof(float)));
+      hipMalloc(&d_uvw, 3 * nr_subgrids * nr_timesteps * sizeof(float)));
   hipCheck(hipMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   hipCheck(
       hipMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
-  hipCheck(hipMalloc(&d_visibilities, nr_baselines * total_nr_timesteps *
+  hipCheck(hipMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
                                           nr_channels * sizeof(float2)));
   hipCheck(hipMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
                                     subgrid_size * sizeof(float2)));

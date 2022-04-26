@@ -37,11 +37,11 @@ int main() {
 
   // Allocate data structures on host
   std::cout << ">>> Allocate data structures on host" << std::endl;
-  idg::Array2D<idg::UVWCoordinate<float>> uvw(nr_baselines, total_nr_timesteps);
+  idg::Array2D<idg::UVWCoordinate<float>> uvw(nr_subgrids, nr_timesteps);
   idg::Array3D<idg::Visibility<std::complex<float>>> cpu_visibilities(
-      nr_baselines, total_nr_timesteps, nr_channels);
+      nr_subgrids, nr_timesteps, nr_channels);
   idg::Array3D<idg::Visibility<std::complex<float>>> gpu_visibilities(
-      nr_baselines, total_nr_timesteps, nr_channels);
+      nr_subgrids, nr_timesteps, nr_channels);
   idg::Array1D<idg::Baseline> baselines(nr_baselines);
   idg::Array4D<idg::Matrix2x2<std::complex<float>>> aterms(
       nr_timeslots, nr_stations, subgrid_size, subgrid_size);
