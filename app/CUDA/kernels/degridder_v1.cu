@@ -7,12 +7,13 @@
 
 namespace cuda {
 
-__global__ void kernel_degridder_v1(
-    const int grid_size, int subgrid_size, float image_size,
-    float w_step_in_lambda, int nr_channels, // channel_offset? for the macro?
-    int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
-    float2 *visibilities, float *spheroidal, float2 *aterms,
-    idg::Metadata *metadata, float2 *subgrids) {
+__global__ void
+kernel_degridder_v1(const int grid_size, int subgrid_size, float image_size,
+                    float w_step_in_lambda,
+                    int nr_channels, // channel_offset? for the macro?
+                    int nr_stations, idg::UVWCoordinate<float> *uvw,
+                    float *wavenumbers, float2 *visibilities, float *spheroidal,
+                    float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
   int tid = tidx + tidy * blockDim.x;
@@ -39,7 +40,7 @@ __global__ void kernel_degridder_v1(
 
   // Apply aterm to subgrid
   for (int y = 0; y < subgrid_size; y++) {
-   for (int x = 0; x < subgrid_size; x++) {
+    for (int x = 0; x < subgrid_size; x++) {
       // Load aterm for station1
       int station1_index = (aterm_index * nr_stations + station1) *
                                subgrid_size * subgrid_size * NR_CORRELATIONS +
@@ -84,7 +85,7 @@ __global__ void kernel_degridder_v1(
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = tid; time < nr_timesteps; time+=nr_threads) {
+  for (int time = tid; time < nr_timesteps; time += nr_threads) {
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;

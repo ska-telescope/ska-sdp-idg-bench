@@ -173,7 +173,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   int nr_correlations = get_env_var("NR_CORRELATIONS", 4);
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
-  int nr_stations = get_env_var("NR_STATIONS", 20);
+  int nr_stations = get_env_var("NR_STATIONS", 50);
   int nr_timeslots = get_env_var("NR_TIMESLOTS", 20);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
@@ -230,7 +230,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
       &d_subgrids};
 
   p_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args, func_name,
-               gflops, gbytes);
+               gflops, gbytes, mvis);
 
   cudaCheck(cudaFree(d_uvw));
   cudaCheck(cudaFree(d_wavenumbers));
@@ -366,7 +366,7 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
       &d_subgrids};
 
   p_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args, func_name,
-               gflops, gbytes);
+               gflops, gbytes, mvis);
 
   cudaCheck(cudaFree(d_uvw));
   cudaCheck(cudaFree(d_wavenumbers));

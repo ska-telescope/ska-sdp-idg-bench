@@ -23,6 +23,7 @@ bool check_value(double value, float threshold = 1e-2) {
 }
 
 #define PRINT_ERRORS
+#define N_ERRORS 1024
 void check_error(const int n, const std::complex<float> *A,
                  const std::complex<float> *B) {
   double r_error = 0.0;
@@ -53,11 +54,12 @@ void check_error(const int n, const std::complex<float> *A,
     float i_ref = B[i].imag();
     double r_diff = r_ref - r_cmp;
     double i_diff = i_ref - i_cmp;
-    if (abs(B[i]) > 0.0f) {
+    if (1) { // abs(B[i]) > 0.0f) {
 #if defined(PRINT_ERRORS)
-      if ((abs(r_diff) > 0.0f || abs(i_diff) > 0.0f) && nerrors < 16) {
-        printf("(%f, %f) - (%f, %f) = (%f, %f)\n", r_cmp, i_cmp, r_ref, i_ref,
-               r_diff, i_diff);
+      if (/*(abs(r_diff) > 0.0001f || abs(i_diff) > 0.0001f) &&*/ nerrors <
+          N_ERRORS) {
+        printf("%d: (%f, %f) - (%f, %f) = (%f, %f)\n", i, r_cmp, i_cmp, r_ref,
+               i_ref, r_diff, i_diff);
         nerrors++;
       }
 #endif

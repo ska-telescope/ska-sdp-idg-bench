@@ -17,7 +17,7 @@ endif()
 
 add_compile_options(-std=c++17)
 include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/app
-                    ${CMAKE_SOURCE_DIR}/app/HIP)
+                    ${CMAKE_SOURCE_DIR}/app/HIP ${CMAKE_SOURCE_DIR}/app/common)
 add_library(${PROJECT_NAME} SHARED ${hip-sources})
 
 target_compile_options(${PROJECT_NAME} PRIVATE -DFUNCTION_ATTRIBUTES=__device__)
