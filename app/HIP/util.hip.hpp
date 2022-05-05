@@ -236,7 +236,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
       &d_subgrids};
 
   p_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args, func_name,
-               gflops, gbytes);
+               gflops, gbytes, mvis);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));
@@ -372,7 +372,7 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
       &d_subgrids};
 
   p_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args, func_name,
-               gflops, gbytes);
+               gflops, gbytes, mvis);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));

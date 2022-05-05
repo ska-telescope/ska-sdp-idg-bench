@@ -88,7 +88,6 @@ template <typename T>
 void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
-
   float seconds;
   double avg_time, joules, avg_joules;
   std::vector<double> ex_joules, ex_time;
