@@ -9,12 +9,13 @@
 #include <powersensor/ROCMPowerSensor.h>
 #endif
 
+
 namespace hip {
 
-#define hipCheck(ans)                                                          \
+#define hipCheck(ans)                                                         \
   { hipAssert((ans), __FILE__, __LINE__); }
 inline void hipAssert(hipError_t code, const char *file, int line,
-                      bool abort = true) {
+                       bool abort = true) {
   if (code != hipSuccess) {
     fprintf(stderr, "GPUassert: %s %s %d\n", hipGetErrorString(code), file,
             line);
@@ -91,16 +92,12 @@ template <typename T>
 void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
-  double avg_time, joules, avg_joules;
   float seconds;
+  double avg_time, joules, avg_joules;
   std::vector<double> ex_joules, ex_time;
-#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
+#ifdef ENABLE_POWERSENSOR
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
-  powersensor::State start, end;
-#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
-  std::unique_ptr<powersensor::PowerSensor> powersensor(
-      powersensor::rocm::ROCMPowerSensor::create(0));
   powersensor::State start, end;
 #else
   hipEvent_t start, stop;
@@ -137,10 +134,10 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
     hipCheck(hipEventRecord(stop));
 
     hipCheck(hipEventSynchronize(stop));
+
     float milliseconds = 0;
     hipCheck(hipEventElapsedTime(&milliseconds, start, stop));
     seconds = milliseconds * 1e-3;
-
 #endif
     ex_time.push_back(seconds);
   }
@@ -156,8 +153,8 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
       (ex_time.size() - nr_warm_up_runs);
 
   report(func_name, avg_time, gflops, gbytes, mvis, avg_joules);
-  report_csv(func_name, get_device_name(), "-hip.csv", avg_time, gflops, gbytes,
-             mvis, avg_joules);
+  report_csv(func_name, get_device_name(), "-hip.csv", avg_time, gflops,
+             gbytes, mvis, avg_joules);
 }
 
 template <typename T>
@@ -167,7 +164,6 @@ void c_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args) {
   print_device_info();
   print_dimensions(gridDim, blockDim);
 #endif
-
   hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
 }
 
@@ -213,21 +209,22 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   initialize_metadata(grid_size, nr_timeslots, nr_timesteps, nr_baselines,
                       metadata);
 
-  hipCheck(
-      hipMalloc(&d_uvw, 3 * nr_subgrids * nr_timesteps * sizeof(float)));
+  hipCheck(hipMalloc(&d_uvw,
+                       3 * nr_subgrids * nr_timesteps * sizeof(float)));
   hipCheck(hipMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   hipCheck(
       hipMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
   hipCheck(hipMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
-                                          nr_channels * nr_correlations * sizeof(float2)));
+                                            nr_channels * nr_correlations * sizeof(float2)));
   hipCheck(hipMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
-                                    subgrid_size * sizeof(float2)));
-  hipCheck(hipMalloc(&d_subgrids, nr_subgrids * nr_correlations * subgrid_size *
                                       subgrid_size * sizeof(float2)));
+  hipCheck(hipMalloc(&d_subgrids, nr_subgrids * nr_correlations *
+                                        subgrid_size * subgrid_size *
+                                        sizeof(float2)));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
   hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -277,14 +274,14 @@ void c_run_gridder(
 
   hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice);
   hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_visibilities, visibilities.data(), visibilities.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice);
   hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -295,7 +292,7 @@ void c_run_gridder(
   c_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args);
 
   hipMemcpy(subgrids.data(), d_subgrids, subgrids.bytes(),
-            hipMemcpyDeviceToHost);
+             hipMemcpyDeviceToHost);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));
@@ -313,11 +310,10 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   float w_step_in_lambda = W_STEP;
 
   int nr_correlations = get_env_var("NR_CORRELATIONS", 4);
-
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
-  int nr_stations = get_env_var("NR_STATIONS", 20);
-  int nr_timeslots = get_env_var("NR_TIMESLOTS", 4);
+  int nr_stations = get_env_var("NR_STATIONS", 50);
+  int nr_timeslots = get_env_var("NR_TIMESLOTS", 20);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
 
@@ -349,21 +345,22 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   initialize_metadata(grid_size, nr_timeslots, nr_timesteps, nr_baselines,
                       metadata);
 
-  hipCheck(
-      hipMalloc(&d_uvw, 3 * nr_subgrids * nr_timesteps * sizeof(float)));
+  hipCheck(hipMalloc(&d_uvw,
+                       3 * nr_subgrids * nr_timesteps * sizeof(float)));
   hipCheck(hipMalloc(&d_wavenumbers, nr_channels * sizeof(float)));
   hipCheck(
       hipMalloc(&d_spheroidal, subgrid_size * subgrid_size * sizeof(float)));
   hipCheck(hipMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
-                                          nr_channels * nr_correlations * sizeof(float2)));
+                                            nr_channels * nr_correlations * sizeof(float2)));
   hipCheck(hipMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
-                                    subgrid_size * sizeof(float2)));
-  hipCheck(hipMalloc(&d_subgrids, nr_subgrids * nr_correlations * subgrid_size *
                                       subgrid_size * sizeof(float2)));
+  hipCheck(hipMalloc(&d_subgrids, nr_subgrids * nr_correlations *
+                                        subgrid_size * subgrid_size *
+                                        sizeof(float2)));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
   hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -413,14 +410,14 @@ void c_run_degridder(
 
   hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice);
   hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice);
   hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
   hipMemcpy(d_subgrids, subgrids.data(), subgrids.bytes(),
-            hipMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -431,7 +428,7 @@ void c_run_degridder(
   c_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args);
 
   hipMemcpy(visibilities.data(), d_visibilities, visibilities.bytes(),
-            hipMemcpyDeviceToHost);
+             hipMemcpyDeviceToHost);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));
