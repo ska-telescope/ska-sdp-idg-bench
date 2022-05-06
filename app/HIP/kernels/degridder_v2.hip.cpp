@@ -9,7 +9,7 @@
 namespace hip {
 
 __global__ void
-kernel_degridder_reference(const int grid_size, int subgrid_size, float image_size,
+kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
                     float w_step_in_lambda,
                     int nr_channels, // channel_offset? for the macro?
                     int nr_stations, idg::UVWCoordinate<float> *uvw,
@@ -136,11 +136,11 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   }   // end for time
 }
 
-void p_run_degridder_reference() {
-  p_run_degridder((void *)kernel_degridder_reference, "degridder_reference", 128);
+void p_run_degridder_v2() {
+  p_run_degridder((void *)kernel_degridder_v2, "degridder_v2", 128);
 }
 
-void c_run_degridder_reference(
+void c_run_degridder_v2(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -154,7 +154,7 @@ void c_run_degridder_reference(
   c_run_degridder(nr_subgrids, grid_size, subgrid_size, image_size,
                   w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
                   visibilities, spheroidal, aterms, metadata, subgrids,
-                  (void *)kernel_degridder_reference, 128);
+                  (void *)kernel_degridder_v2, 128);
 }
 
 } // namespace hip
