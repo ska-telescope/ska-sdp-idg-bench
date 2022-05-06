@@ -95,11 +95,16 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
   float seconds;
   double avg_time, joules, avg_joules;
   std::vector<double> ex_joules, ex_time;
-#ifdef ENABLE_POWERSENSOR
+#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
   powersensor::State start, end;
+#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
+  std::unique_ptr<powersensor::PowerSensor> powersensor(
+      powersensor::rocm::ROCMPowerSensor::create(0));
+  powersensor::State start, end;
 #else
+
   hipEvent_t start, stop;
   hipCheck(hipEventCreate(&start));
   hipCheck(hipEventCreate(&stop));
