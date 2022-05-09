@@ -2,16 +2,16 @@
 #include "math.cuh"
 #include "util.cuh"
 
-__shared__ float wavenumbers_v3_[MAX_NR_CHANNELS];
+namespace cuda {
 
-template <int current_nr_channels>
-__device__ void
-kernel_gridder_v3_(const int grid_size, int subgrid_size, float image_size,
-                   float w_step_in_lambda, int nr_channels,
-                   int channel_offset, // channel_offset? for the macro?
-                   int nr_stations, idg::UVWCoordinate<float> *uvw,
-                   float *wavenumbers, float2 *visibilities, float *spheroidal,
-                   float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
+__global__ void
+
+kernel_gridder_v3(const int grid_size, int subgrid_size, float image_size,
+                  float w_step_in_lambda, int nr_channels, int nr_stations,
+                  idg::UVWCoordinate<float> *uvw, float *wavenumbers,
+                  float2 *visibilities, float *spheroidal, float2 *aterms,
+                  idg::Metadata *metadata, float2 *subgrids) {
+
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
   int tid = tidx + tidy * blockDim.x;
@@ -33,26 +33,6 @@ kernel_gridder_v3_(const int grid_size, int subgrid_size, float image_size,
   const int x_coordinate = m.coordinate.x;
   const int y_coordinate = m.coordinate.y;
   const float w_offset_in_lambda = w_step_in_lambda * (m.coordinate.z + 0.5);
-
-  // Set subgrid to zero
-  if (channel_offset == 0) {
-    for (int i = tid; i < subgrid_size * subgrid_size; i += nr_threads) {
-      int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i);
-      int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i);
-      int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i);
-      int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i);
-      subgrids[idx_xx] = make_float2(0, 0);
-      subgrids[idx_xy] = make_float2(0, 0);
-      subgrids[idx_yx] = make_float2(0, 0);
-      subgrids[idx_yy] = make_float2(0, 0);
-    }
-  }
-
-  for (int i = tid; i < current_nr_channels; i += nr_threads) {
-    wavenumbers_v3_[i] = wavenumbers[i + channel_offset];
-  }
-
-  __syncthreads();
 
   // Compute u and v offset in wavelenghts
   const float u_offset = (x_coordinate + subgrid_size / 2 - grid_size / 2) *
@@ -96,22 +76,21 @@ kernel_gridder_v3_(const int grid_size, int subgrid_size, float image_size,
 
       float phase_offset = u_offset * l + v_offset * m + w_offset * n;
 
-      for (int chan = 0; chan < current_nr_channels; chan++) {
+      for (int chan = 0; chan < nr_channels; chan++) {
         // Compute phase
-        float phase = phase_offset - (phase_index * wavenumbers_v3_[chan]);
+        float phase = phase_offset - (phase_index * wavenumbers[chan]);
 
         // Compute phasor
-        float2 phasor = make_float2(cosf(phase), sinf(phase));
+        float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
         // Update pixel for every polarization
 
         int idx_time = time_offset_global + time_offset_local;
-        int idx_chan = channel_offset + chan;
 
-        int indexXX = index_visibility(nr_channels, idx_time, idx_chan, 0);
-        int indexXY = index_visibility(nr_channels, idx_time, idx_chan, 1);
-        int indexYX = index_visibility(nr_channels, idx_time, idx_chan, 2);
-        int indexYY = index_visibility(nr_channels, idx_time, idx_chan, 3);
+        int indexXX = index_visibility(nr_channels, idx_time, chan, 0);
+        int indexXY = index_visibility(nr_channels, idx_time, chan, 1);
+        int indexYX = index_visibility(nr_channels, idx_time, chan, 2);
+        int indexYY = index_visibility(nr_channels, idx_time, chan, 3);
 
         float2 visXX = visibilities[indexXX];
         float2 visXY = visibilities[indexXY];
@@ -171,36 +150,6 @@ kernel_gridder_v3_(const int grid_size, int subgrid_size, float image_size,
 
     // }
   }
-}
-
-#define KERNEL_GRIDDER_TEMPLATE(current_nr_channels)                           \
-  for (; (channel_offset + current_nr_channels) <= nr_channels;                \
-       channel_offset += current_nr_channels) {                                \
-    kernel_gridder_v3_<current_nr_channels>(                                   \
-        grid_size, subgrid_size, image_size, w_step_in_lambda, nr_channels,    \
-        channel_offset, nr_stations, uvw, wavenumbers, visibilities,           \
-        spheroidal, aterms, metadata, subgrids);                               \
-  }
-
-namespace cuda {
-
-__global__ void
-
-kernel_gridder_v3(const int grid_size, int subgrid_size, float image_size,
-                  float w_step_in_lambda,
-                  int nr_channels, // channel_offset? for the macro?
-                  int nr_stations, idg::UVWCoordinate<float> *uvw,
-                  float *wavenumbers, float2 *visibilities, float *spheroidal,
-                  float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
-  int channel_offset = 0;
-  KERNEL_GRIDDER_TEMPLATE(8);
-  KERNEL_GRIDDER_TEMPLATE(7);
-  KERNEL_GRIDDER_TEMPLATE(6);
-  KERNEL_GRIDDER_TEMPLATE(5);
-  KERNEL_GRIDDER_TEMPLATE(4);
-  KERNEL_GRIDDER_TEMPLATE(3);
-  KERNEL_GRIDDER_TEMPLATE(2);
-  KERNEL_GRIDDER_TEMPLATE(1);
 }
 
 void p_run_gridder_v3() {

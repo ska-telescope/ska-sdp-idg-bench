@@ -2,8 +2,6 @@
 #include "math.hip.hpp"
 #include "util.hip.hpp"
 
-__shared__ float2 visibilities_v4_[BATCH_SIZE][NR_CORRELATIONS];
-__shared__ float4 uvw_v4_[BATCH_SIZE];
 __shared__ float wavenumbers_v4_[MAX_NR_CHANNELS];
 
 template <int current_nr_channels>
@@ -84,88 +82,61 @@ kernel_gridder_v4_(const int grid_size, int subgrid_size, float image_size,
     float m = compute_m(y, subgrid_size, image_size);
     float n = compute_n(l, m);
 
-    int current_nr_timesteps = BATCH_SIZE / MAX_NR_CHANNELS;
     // Iterate all timesteps
     for (int time_offset_local = 0; time_offset_local < nr_timesteps;
-         time_offset_local += current_nr_timesteps) {
-      current_nr_timesteps =
-          nr_timesteps - time_offset_local < current_nr_timesteps
-              ? nr_timesteps - time_offset_local
-              : current_nr_timesteps;
-      __syncthreads();
-      for (int time = tid; time < current_nr_timesteps; time += nr_threads) {
-        idg::UVWCoordinate<float> a =
-            uvw[time_offset_global + time_offset_local + time];
-        uvw_v4_[time] = make_float4(a.u, a.v, a.w, 0);
-      }
-
+         time_offset_local++) {
       // Load visibilities
-      for (int k = tid; k < current_nr_timesteps * current_nr_channels;
-           k += nr_threads) {
-        int idx_time =
-            time_offset_global + time_offset_local + (k / current_nr_channels);
-        int idx_chan = channel_offset + (k % current_nr_channels);
-        int index = (time_offset_global + time_offset_local +
-                     (k / current_nr_channels)) *
-                        nr_channels +
-                    channel_offset + (k % current_nr_channels);
+
+      float u = uvw[time_offset_global + time_offset_local].u;
+      float v = uvw[time_offset_global + time_offset_local].v;
+      float w = uvw[time_offset_global + time_offset_local].w;
+
+      // Compute phase index
+      float phase_index = u * l + v * m + w * n;
+
+      float phase_offset = u_offset * l + v_offset * m + w_offset * n;
+
+      for (int chan = 0; chan < current_nr_channels; chan++) {
+        // Compute phase
+        float phase = phase_offset - (phase_index * wavenumbers_v4_[chan]);
+
+        // Compute phasor
+        float2 phasor = make_float2(__cosf(phase), __sinf(phase));
+
+        // Update pixel for every polarization
+
+        int idx_time = time_offset_global + time_offset_local;
+        int idx_chan = channel_offset + chan;
+
         int indexXX = index_visibility(nr_channels, idx_time, idx_chan, 0);
         int indexXY = index_visibility(nr_channels, idx_time, idx_chan, 1);
         int indexYX = index_visibility(nr_channels, idx_time, idx_chan, 2);
         int indexYY = index_visibility(nr_channels, idx_time, idx_chan, 3);
-        visibilities_v4_[k][0] = visibilities[indexXX];
-        visibilities_v4_[k][1] = visibilities[indexXY];
-        visibilities_v4_[k][2] = visibilities[indexYX];
-        visibilities_v4_[k][3] = visibilities[indexYY];
-      }
-      __syncthreads();
 
-      for (int time = 0; time < current_nr_timesteps; time++) {
+        float2 visXX = visibilities[indexXX];
+        float2 visXY = visibilities[indexXY];
+        float2 visYX = visibilities[indexYX];
+        float2 visYY = visibilities[indexYY];
 
-        // Load UVW coordinates
-        float u = uvw_v4_[time].x;
-        float v = uvw_v4_[time].y;
-        float w = uvw_v4_[time].z;
+        pixelXX.x += phasor.x * visXX.x;
+        pixelXX.y += phasor.x * visXX.y;
+        pixelXX.x -= phasor.y * visXX.y;
+        pixelXX.y += phasor.y * visXX.x;
 
-        // Compute phase index
-        float phase_index = u * l + v * m + w * n;
+        pixelXY.x += phasor.x * visXY.x;
+        pixelXY.y += phasor.x * visXY.y;
+        pixelXY.x -= phasor.y * visXY.y;
+        pixelXY.y += phasor.y * visXY.x;
 
-        float phase_offset = u_offset * l + v_offset * m + w_offset * n;
+        pixelYX.x += phasor.x * visYX.x;
+        pixelYX.y += phasor.x * visYX.y;
+        pixelYX.x -= phasor.y * visYX.y;
+        pixelYX.y += phasor.y * visYX.x;
 
-        for (int chan = 0; chan < current_nr_channels; chan++) {
-          // Compute phase
-          float phase = phase_offset - (phase_index * wavenumbers_v4_[chan]);
-
-          // Compute phasor
-          float2 phasor = make_float2(cosf(phase), sinf(phase));
-
-          // Update pixel for every polarization
-
-          float2 visXX = visibilities_v4_[time * current_nr_channels + chan][0];
-          float2 visXY = visibilities_v4_[time * current_nr_channels + chan][1];
-          float2 visYX = visibilities_v4_[time * current_nr_channels + chan][2];
-          float2 visYY = visibilities_v4_[time * current_nr_channels + chan][3];
-
-          pixelXX.x += phasor.x * visXX.x;
-          pixelXX.y += phasor.x * visXX.y;
-          pixelXX.x -= phasor.y * visXX.y;
-          pixelXX.y += phasor.y * visXX.x;
-
-          pixelXY.x += phasor.x * visXY.x;
-          pixelXY.y += phasor.x * visXY.y;
-          pixelXY.x -= phasor.y * visXY.y;
-          pixelXY.y += phasor.y * visXY.x;
-
-          pixelYX.x += phasor.x * visYX.x;
-          pixelYX.y += phasor.x * visYX.y;
-          pixelYX.x -= phasor.y * visYX.y;
-          pixelYX.y += phasor.y * visYX.x;
-
-          pixelYY.x += phasor.x * visYY.x;
-          pixelYY.y += phasor.x * visYY.y;
-          pixelYY.x -= phasor.y * visYY.y;
-          pixelYY.y += phasor.y * visYY.x;
-        }
+        pixelYY.x += phasor.x * visYY.x;
+        pixelYY.y += phasor.x * visYY.y;
+        pixelYY.x -= phasor.y * visYY.y;
+        pixelYY.y += phasor.y * visYY.x;
       }
     }
 

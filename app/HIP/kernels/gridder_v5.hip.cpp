@@ -64,38 +64,25 @@ kernel_gridder_v5_(const int grid_size, int subgrid_size, float image_size,
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all pixels in subgrid
-  for (int i = tid; i < subgrid_size * subgrid_size;
-       i += nr_threads * UNROLL_PIXELS) {
+  for (int i = tid; i < subgrid_size * subgrid_size; i += nr_threads) {
     // for (int x = 0; x < subgrid_size; x++) {
     //  Initialize pixel for every polarization
-    // int x = i % subgrid_size;
-    // int y = i / subgrid_size;
+    int x = i % subgrid_size;
+    int y = i / subgrid_size;
 
-    float2 pixelXX[UNROLL_PIXELS];
-    float2 pixelXY[UNROLL_PIXELS];
-    float2 pixelYX[UNROLL_PIXELS];
-    float2 pixelYY[UNROLL_PIXELS];
+    float2 pixelXX;
+    float2 pixelXY;
+    float2 pixelYX;
+    float2 pixelYY;
 
-    for (int p = 0; p < UNROLL_PIXELS; p++) {
-      pixelXX[p] = make_float2(0, 0);
-      pixelXY[p] = make_float2(0, 0);
-      pixelYX[p] = make_float2(0, 0);
-      pixelYY[p] = make_float2(0, 0);
-    }
+    pixelXX = make_float2(0, 0);
+    pixelXY = make_float2(0, 0);
+    pixelYX = make_float2(0, 0);
+    pixelYY = make_float2(0, 0);
 
-    float l[UNROLL_PIXELS];
-    float m[UNROLL_PIXELS];
-    float n[UNROLL_PIXELS];
-    float phase_offset[UNROLL_PIXELS];
-    for (int p = 0; p < UNROLL_PIXELS; p++) {
-
-      int x = (i + p * nr_threads) % subgrid_size;
-      int y = (i + p * nr_threads) / subgrid_size;
-      l[p] = compute_l(x, subgrid_size, image_size);
-      m[p] = compute_m(y, subgrid_size, image_size);
-      n[p] = compute_n(l[p], m[p]);
-      phase_offset[p] = u_offset * l[p] + v_offset * m[p] + w_offset * n[p];
-    }
+    float l = compute_l(x, subgrid_size, image_size);
+    float m = compute_m(y, subgrid_size, image_size);
+    float n = compute_n(l, m);
 
     int current_nr_timesteps = BATCH_SIZE / MAX_NR_CHANNELS;
     // Iterate all timesteps
@@ -139,86 +126,78 @@ kernel_gridder_v5_(const int grid_size, int subgrid_size, float image_size,
         float u = uvw_v5_[time].x;
         float v = uvw_v5_[time].y;
         float w = uvw_v5_[time].z;
-        for (int p = 0; p < UNROLL_PIXELS; p++) {
-          // Compute phase index
-          float phase_index = u * l[p] + v * m[p] + w * n[p];
 
-          for (int chan = 0; chan < current_nr_channels; chan++) {
-            // Compute phase
-            float phase =
-                phase_offset[p] - (phase_index * wavenumbers_v5_[chan]);
+        // Compute phase index
+        float phase_index = u * l + v * m + w * n;
 
-            // Compute phasor
-            float2 phasor = make_float2(cosf(phase), sinf(phase));
+        float phase_offset = u_offset * l + v_offset * m + w_offset * n;
 
-            // Update pixel for every polarization
+        for (int chan = 0; chan < current_nr_channels; chan++) {
+          // Compute phase
+          float phase = phase_offset - (phase_index * wavenumbers_v5_[chan]);
 
-            float2 visXX =
-                visibilities_v5_[time * current_nr_channels + chan][0];
-            float2 visXY =
-                visibilities_v5_[time * current_nr_channels + chan][1];
-            float2 visYX =
-                visibilities_v5_[time * current_nr_channels + chan][2];
-            float2 visYY =
-                visibilities_v5_[time * current_nr_channels + chan][3];
+          // Compute phasor
+          float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
-            pixelXX[p].x += phasor.x * visXX.x;
-            pixelXX[p].y += phasor.x * visXX.y;
-            pixelXX[p].x -= phasor.y * visXX.y;
-            pixelXX[p].y += phasor.y * visXX.x;
+          // Update pixel for every polarization
 
-            pixelXY[p].x += phasor.x * visXY.x;
-            pixelXY[p].y += phasor.x * visXY.y;
-            pixelXY[p].x -= phasor.y * visXY.y;
-            pixelXY[p].y += phasor.y * visXY.x;
+          float2 visXX = visibilities_v5_[time * current_nr_channels + chan][0];
+          float2 visXY = visibilities_v5_[time * current_nr_channels + chan][1];
+          float2 visYX = visibilities_v5_[time * current_nr_channels + chan][2];
+          float2 visYY = visibilities_v5_[time * current_nr_channels + chan][3];
 
-            pixelYX[p].x += phasor.x * visYX.x;
-            pixelYX[p].y += phasor.x * visYX.y;
-            pixelYX[p].x -= phasor.y * visYX.y;
-            pixelYX[p].y += phasor.y * visYX.x;
+          pixelXX.x += phasor.x * visXX.x;
+          pixelXX.y += phasor.x * visXX.y;
+          pixelXX.x -= phasor.y * visXX.y;
+          pixelXX.y += phasor.y * visXX.x;
 
-            pixelYY[p].x += phasor.x * visYY.x;
-            pixelYY[p].y += phasor.x * visYY.y;
-            pixelYY[p].x -= phasor.y * visYY.y;
-            pixelYY[p].y += phasor.y * visYY.x;
-          }
+          pixelXY.x += phasor.x * visXY.x;
+          pixelXY.y += phasor.x * visXY.y;
+          pixelXY.x -= phasor.y * visXY.y;
+          pixelXY.y += phasor.y * visXY.x;
+
+          pixelYX.x += phasor.x * visYX.x;
+          pixelYX.y += phasor.x * visYX.y;
+          pixelYX.x -= phasor.y * visYX.y;
+          pixelYX.y += phasor.y * visYX.x;
+
+          pixelYY.x += phasor.x * visYY.x;
+          pixelYY.y += phasor.x * visYY.y;
+          pixelYY.x -= phasor.y * visYY.y;
+          pixelYY.y += phasor.y * visYY.x;
         }
       }
     }
-    for (int p = 0; p < UNROLL_PIXELS; p++) {
 
-      int x = (i + p * nr_threads) % subgrid_size;
-      int y = (i + p * nr_threads) / subgrid_size;
+    // Load aterm for station1
+    float2 aXX1, aXY1, aYX1, aYY1;
+    read_aterm(subgrid_size, nr_stations, aterm_index, station1, y, x, aterms,
+               &aXX1, &aXY1, &aYX1, &aYY1);
 
-      // Load aterm for station1
-      float2 aXX1, aXY1, aYX1, aYY1;
-      read_aterm(subgrid_size, nr_stations, aterm_index, station1, y, x, aterms,
-                 &aXX1, &aXY1, &aYX1, &aYY1);
+    // Load aterm for station2
+    float2 aXX2, aXY2, aYX2, aYY2;
+    read_aterm(subgrid_size, nr_stations, aterm_index, station2, y, x, aterms,
+               &aXX2, &aXY2, &aYX2, &aYY2);
 
-      // Load aterm for station2
-      float2 aXX2, aXY2, aYX2, aYY2;
-      read_aterm(subgrid_size, nr_stations, aterm_index, station2, y, x, aterms,
-                 &aXX2, &aXY2, &aYX2, &aYY2);
+    // Apply the conjugate transpose of the A-term
+    apply_aterm(conj(aXX1), conj(aYX1), conj(aXY1), conj(aYY1), conj(aXX2),
+                conj(aYX2), conj(aXY2), conj(aYY2), pixelXX, pixelXY, pixelYX,
+                pixelYY);
 
-      // Apply the conjugate transpose of the A-term
-      apply_aterm(conj(aXX1), conj(aYX1), conj(aXY1), conj(aYY1), conj(aXX2),
-                  conj(aYX2), conj(aXY2), conj(aYY2), pixelXX[p], pixelXY[p],
-                  pixelYX[p], pixelYY[p]);
+    // Load a term for station1
+    // Load spheroidal
+    float sph = spheroidal[y * subgrid_size + x];
 
-      // Load a term for station1
-      // Load spheroidal
-      float sph = spheroidal[y * subgrid_size + x];
+    int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i);
+    int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i);
+    int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i);
+    int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i);
 
-      int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i + p * nr_threads);
-      int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i + p * nr_threads);
-      int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i + p * nr_threads);
-      int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i + p * nr_threads);
+    subgrids[idx_xx] += pixelXX * sph;
+    subgrids[idx_xy] += pixelXY * sph;
+    subgrids[idx_yx] += pixelYX * sph;
+    subgrids[idx_yy] += pixelYY * sph;
 
-      subgrids[idx_xx] += pixelXX[p] * sph;
-      subgrids[idx_xy] += pixelXY[p] * sph;
-      subgrids[idx_yx] += pixelYX[p] * sph;
-      subgrids[idx_yy] += pixelYY[p] * sph;
-    }
     // }
   }
 }

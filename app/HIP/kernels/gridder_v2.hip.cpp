@@ -5,13 +5,12 @@
 namespace hip {
 
 __global__ void
-
 kernel_gridder_v2(const int grid_size, int subgrid_size, float image_size,
-                  float w_step_in_lambda, int nr_channels, int nr_stations,
-                  idg::UVWCoordinate<float> *uvw, float *wavenumbers,
-                  float2 *visibilities, float *spheroidal, float2 *aterms,
-                  idg::Metadata *metadata, float2 *subgrids) {
-
+                  float w_step_in_lambda,
+                  int nr_channels, // channel_offset? for the macro?
+                  int nr_stations, idg::UVWCoordinate<float> *uvw,
+                  float *wavenumbers, float2 *visibilities, float *spheroidal,
+                  float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
   int tid = tidx + tidy * blockDim.x;
@@ -24,7 +23,7 @@ kernel_gridder_v2(const int grid_size, int subgrid_size, float image_size,
 
   // Load metadata
   const idg::Metadata m = metadata[s];
-  const int time_offset_global =
+  const int time_offset =
       (m.baseline_offset - baseline_offset_1) + m.time_offset;
   const int nr_timesteps = m.nr_timesteps;
   const int aterm_index = m.aterm_index;
@@ -48,106 +47,73 @@ kernel_gridder_v2(const int grid_size, int subgrid_size, float image_size,
     int x = i % subgrid_size;
     int y = i / subgrid_size;
 
-    float2 pixelXX;
-    float2 pixelXY;
-    float2 pixelYX;
-    float2 pixelYY;
+    float2 pixels[NR_CORRELATIONS];
+    for (int k = 0; k < NR_CORRELATIONS; k++) {
+      pixels[k] = make_float2(0, 0);
+    }
 
-    pixelXX = make_float2(0, 0);
-    pixelXY = make_float2(0, 0);
-    pixelYX = make_float2(0, 0);
-    pixelYY = make_float2(0, 0);
-
+    // Compute l,m,n
     float l = compute_l(x, subgrid_size, image_size);
     float m = compute_m(y, subgrid_size, image_size);
     float n = compute_n(l, m);
-
     // Iterate all timesteps
-    for (int time_offset_local = 0; time_offset_local < nr_timesteps;
-         time_offset_local++) {
-      // Load visibilities
-
-      float u = uvw[time_offset_global + time_offset_local].u;
-      float v = uvw[time_offset_global + time_offset_local].v;
-      float w = uvw[time_offset_global + time_offset_local].w;
+    for (int time = 0; time < nr_timesteps; time++) {
+      // Load UVW coordinates
+      float u = uvw[time_offset + time].u;
+      float v = uvw[time_offset + time].v;
+      float w = uvw[time_offset + time].w;
 
       // Compute phase index
       float phase_index = u * l + v * m + w * n;
 
+      // Compute phase offset
       float phase_offset = u_offset * l + v_offset * m + w_offset * n;
 
+      // Update pixel for every channel
       for (int chan = 0; chan < nr_channels; chan++) {
         // Compute phase
         float phase = phase_offset - (phase_index * wavenumbers[chan]);
 
         // Compute phasor
-        float2 phasor = make_float2(cosf(phase), sinf(phase));
+        float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
         // Update pixel for every polarization
 
-        int idx_time = time_offset_global + time_offset_local;
-
-        int indexXX = index_visibility(nr_channels, idx_time, chan, 0);
-        int indexXY = index_visibility(nr_channels, idx_time, chan, 1);
-        int indexYX = index_visibility(nr_channels, idx_time, chan, 2);
-        int indexYY = index_visibility(nr_channels, idx_time, chan, 3);
-
-        float2 visXX = visibilities[indexXX];
-        float2 visXY = visibilities[indexXY];
-        float2 visYX = visibilities[indexYX];
-        float2 visYY = visibilities[indexYY];
-
-        pixelXX.x += phasor.x * visXX.x;
-        pixelXX.y += phasor.x * visXX.y;
-        pixelXX.x -= phasor.y * visXX.y;
-        pixelXX.y += phasor.y * visXX.x;
-
-        pixelXY.x += phasor.x * visXY.x;
-        pixelXY.y += phasor.x * visXY.y;
-        pixelXY.x -= phasor.y * visXY.y;
-        pixelXY.y += phasor.y * visXY.x;
-
-        pixelYX.x += phasor.x * visYX.x;
-        pixelYX.y += phasor.x * visYX.y;
-        pixelYX.x -= phasor.y * visYX.y;
-        pixelYX.y += phasor.y * visYX.x;
-
-        pixelYY.x += phasor.x * visYY.x;
-        pixelYY.y += phasor.x * visYY.y;
-        pixelYY.x -= phasor.y * visYY.y;
-        pixelYY.y += phasor.y * visYY.x;
+        size_t index = (time_offset + time) * nr_channels + chan;
+        for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
+          float2 visibility = visibilities[index * NR_CORRELATIONS + pol];
+          int tmp = (index * NR_CORRELATIONS + pol);
+          pixels[pol] += visibility * phasor;
+        }
       }
     }
 
-    // Load aterm for station1
-    float2 aXX1, aXY1, aYX1, aYY1;
-    read_aterm(subgrid_size, nr_stations, aterm_index, station1, y, x, aterms,
-               &aXX1, &aXY1, &aYX1, &aYY1);
+    // Load a term for station1
+    int station1_index = (aterm_index * nr_stations + station1) * subgrid_size *
+                             subgrid_size * NR_CORRELATIONS +
+                         y * subgrid_size * NR_CORRELATIONS +
+                         x * NR_CORRELATIONS;
+    float2 *aterm1_ptr = &aterms[station1_index];
 
     // Load aterm for station2
-    float2 aXX2, aXY2, aYX2, aYY2;
-    read_aterm(subgrid_size, nr_stations, aterm_index, station2, y, x, aterms,
-               &aXX2, &aXY2, &aYX2, &aYY2);
+    int station2_index = (aterm_index * nr_stations + station2) * subgrid_size *
+                             subgrid_size * NR_CORRELATIONS +
+                         y * subgrid_size * NR_CORRELATIONS +
+                         x * NR_CORRELATIONS;
+    float2 *aterm2_ptr = &aterms[station2_index];
+    // Apply aterm
+    apply_aterm_gridder(pixels, aterm1_ptr, aterm2_ptr);
 
-    // Apply the conjugate transpose of the A-term
-    apply_aterm(conj(aXX1), conj(aYX1), conj(aXY1), conj(aYY1), conj(aXX2),
-                conj(aYX2), conj(aXY2), conj(aYY2), pixelXX, pixelXY, pixelYX,
-                pixelYY);
-
-    // Load a term for station1
     // Load spheroidal
     float sph = spheroidal[y * subgrid_size + x];
 
-    int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i);
-    int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i);
-    int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i);
-    int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i);
-
-    subgrids[idx_xx] += pixelXX * sph;
-    subgrids[idx_xy] += pixelXY * sph;
-    subgrids[idx_yx] += pixelYX * sph;
-    subgrids[idx_yy] += pixelYY * sph;
-
+    // Set subgrid value
+    for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
+      unsigned idx_subgrid = s * NR_CORRELATIONS * subgrid_size * subgrid_size +
+                             pol * subgrid_size * subgrid_size +
+                             y * subgrid_size + x;
+      subgrids[idx_subgrid] = pixels[pol] * sph;
+    }
     // }
   }
 }
