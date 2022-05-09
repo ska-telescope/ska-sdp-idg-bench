@@ -105,9 +105,12 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
         sum[k] = make_float2(0, 0);
       }
 
-      // Iterate all pixels in subgrid
-      for (int y = 0; y < subgrid_size; y++) {
-        for (int x = 0; x < subgrid_size; x++) {
+    // Iterate all pixels in subgrid
+  for (int i = 0; i < subgrid_size * subgrid_size; i ++) {
+    // for (int x = 0; x < subgrid_size; x++) {
+    //  Initialize pixel for every polarization
+    int x = i % subgrid_size;
+    int y = i / subgrid_size;
 
           // Compute l,m,n
           const float l = compute_l(x, subgrid_size, image_size);
@@ -129,7 +132,7 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
             sum[pol] += pixels_v2[y][x][pol] * phasor;
           }
-        } // end for x
+       // } // end for x
       }   // end for y
 
       size_t index = (time_offset + time) * nr_channels + chan;

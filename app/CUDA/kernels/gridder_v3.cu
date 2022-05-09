@@ -134,6 +134,8 @@ kernel_gridder_v3(const int grid_size, int subgrid_size, float image_size,
                 conj(aYX2), conj(aXY2), conj(aYY2), pixelXX, pixelXY, pixelYX,
                 pixelYY);
 
+
+
     // Load a term for station1
     // Load spheroidal
     float sph = spheroidal[y * subgrid_size + x];
