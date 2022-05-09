@@ -7,12 +7,13 @@
 
 namespace cuda {
 
-__global__ void kernel_degridder_reference(
-    const int grid_size, int subgrid_size, float image_size,
-    float w_step_in_lambda, int nr_channels, // channel_offset? for the macro?
-    int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
-    float2 *visibilities, float *spheroidal, float2 *aterms,
-    idg::Metadata *metadata, float2 *subgrids) {
+__global__ void
+kernel_degridder_reference(const int grid_size, int subgrid_size, float image_size,
+                    float w_step_in_lambda,
+                    int nr_channels, // channel_offset? for the macro?
+                    int nr_stations, idg::UVWCoordinate<float> *uvw,
+                    float *wavenumbers, float2 *visibilities, float *spheroidal,
+                    float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
   int tid = tidx + tidy * blockDim.x;
@@ -84,7 +85,7 @@ __global__ void kernel_degridder_reference(
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = 0; time < nr_timesteps; time++) {
+  for (int time = tid; time < nr_timesteps; time++) {
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;
@@ -95,8 +96,8 @@ __global__ void kernel_degridder_reference(
 
       // Update all polarizations
       float2 sum[NR_CORRELATIONS];
-      for (int i = 0; i < NR_CORRELATIONS; i++) {
-        sum[i] = make_float2(0, 0);
+      for (int k = 0; k < NR_CORRELATIONS; k++) {
+        sum[k] = make_float2(0, 0);
       }
 
       // Iterate all pixels in subgrid

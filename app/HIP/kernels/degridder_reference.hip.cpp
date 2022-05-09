@@ -86,7 +86,7 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = tid; time < nr_timesteps; time += nr_threads) {
+  for (int time = tid; time < nr_timesteps; time++) {
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;
@@ -137,7 +137,7 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
 }
 
 void p_run_degridder_reference() {
-  p_run_degridder((void *)kernel_degridder_reference, "degridder_reference", 128);
+  p_run_degridder((void *)kernel_degridder_reference, "degridder_reference", 1);
 }
 
 void c_run_degridder_reference(
@@ -154,7 +154,7 @@ void c_run_degridder_reference(
   c_run_degridder(nr_subgrids, grid_size, subgrid_size, image_size,
                   w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
                   visibilities, spheroidal, aterms, metadata, subgrids,
-                  (void *)kernel_degridder_reference, 128);
+                  (void *)kernel_degridder_reference, 1);
 }
 
 } // namespace hip

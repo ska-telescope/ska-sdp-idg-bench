@@ -5,6 +5,9 @@
 // not possible to pass it as input
 #define SUBGRID_SIZE 32
 
+// Storage
+__shared__ float2 pixels_v1[SUBGRID_SIZE][SUBGRID_SIZE][NR_CORRELATIONS];
+
 namespace cuda {
 
 __global__ void
@@ -35,12 +38,14 @@ kernel_degridder_v1(const int grid_size, int subgrid_size, float image_size,
   const int x_coordinate = m.coordinate.x;
   const int y_coordinate = m.coordinate.y;
   const float w_offset_in_lambda = w_step_in_lambda * (m.coordinate.z + 0.5);
-  // Storage
-  float2 pixels[SUBGRID_SIZE][SUBGRID_SIZE][NR_CORRELATIONS];
 
-  // Apply aterm to subgrid
-  for (int y = 0; y < subgrid_size; y++) {
-    for (int x = 0; x < subgrid_size; x++) {
+  // Iterate all pixels in subgrid
+  for (int i = tid; i < subgrid_size * subgrid_size; i += nr_threads) {
+    // for (int x = 0; x < subgrid_size; x++) {
+    //  Initialize pixel for every polarization
+    int x = i % subgrid_size;
+    int y = i / subgrid_size;
+
       // Load aterm for station1
       int station1_index = (aterm_index * nr_stations + station1) *
                                subgrid_size * subgrid_size * NR_CORRELATIONS +
@@ -72,9 +77,9 @@ kernel_degridder_v1(const int grid_size, int subgrid_size, float image_size,
 
       // Store pixels
       for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-        pixels[y][x][pol] = pixels_[pol];
+        pixels_v1[y][x][pol] = pixels_[pol];
       }
-    } // end x
+    //} // end x
   }   // end y
 
   // Compute u and v offset in wavelenghts
@@ -85,7 +90,7 @@ kernel_degridder_v1(const int grid_size, int subgrid_size, float image_size,
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = tid; time < nr_timesteps; time += nr_threads) {
+  for (int time = tid; time < nr_timesteps; time+=nr_threads) {
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;
@@ -122,7 +127,7 @@ kernel_degridder_v1(const int grid_size, int subgrid_size, float image_size,
           float2 phasor = make_float2(cosf(phase), sinf(phase));
 
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-            sum[pol] += pixels[y][x][pol] * phasor;
+            sum[pol] += pixels_v1[y][x][pol] * phasor;
           }
         } // end for x
       }   // end for y
