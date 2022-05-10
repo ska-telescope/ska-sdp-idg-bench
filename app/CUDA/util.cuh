@@ -201,8 +201,11 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   idg::UVWCoordinate<float> *d_uvw;
   float *d_wavenumbers, *d_spheroidal;
   float2 *d_visibilities, *d_aterms, *d_subgrids;
+  idg::Array1D<idg::Baseline> baselines(nr_baselines);
   idg::Metadata *d_metadata;
-  initialize_metadata(grid_size, nr_timeslots, nr_timesteps, nr_baselines,
+
+  initialize_baselines(nr_stations, baselines);
+  initialize_metadata(grid_size, nr_timeslots, nr_timesteps, baselines,
                       metadata);
 
   cudaCheck(cudaMalloc(&d_uvw,
@@ -213,7 +216,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   cudaCheck(cudaMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
                                             nr_channels * nr_correlations * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
-                                      subgrid_size * sizeof(float2)));
+                                      subgrid_size * nr_correlations * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_subgrids, nr_subgrids * nr_correlations *
                                         subgrid_size * subgrid_size *
                                         sizeof(float2)));
@@ -337,8 +340,11 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   idg::UVWCoordinate<float> *d_uvw;
   float *d_wavenumbers, *d_spheroidal;
   float2 *d_visibilities, *d_aterms, *d_subgrids;
+  idg::Array1D<idg::Baseline> baselines(nr_baselines);
   idg::Metadata *d_metadata;
-  initialize_metadata(grid_size, nr_timeslots, nr_timesteps, nr_baselines,
+
+  initialize_baselines(nr_stations, baselines);
+  initialize_metadata(grid_size, nr_timeslots, nr_timesteps, baselines,
                       metadata);
 
   cudaCheck(cudaMalloc(&d_uvw,
@@ -349,7 +355,7 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   cudaCheck(cudaMalloc(&d_visibilities, nr_subgrids * nr_timesteps *
                                             nr_channels * nr_correlations * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_aterms, nr_timeslots * nr_stations * subgrid_size *
-                                      subgrid_size * sizeof(float2)));
+                                      subgrid_size * nr_correlations * sizeof(float2)));
   cudaCheck(cudaMalloc(&d_subgrids, nr_subgrids * nr_correlations *
                                         subgrid_size * subgrid_size *
                                         sizeof(float2)));
