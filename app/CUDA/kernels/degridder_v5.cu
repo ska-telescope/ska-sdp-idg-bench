@@ -104,10 +104,10 @@ kernel_degridder_v5_(int grid_size, int subgrid_size, float image_size,
 
 
 
-    pixels_v5[y][x][0] = pixelXX;
-    pixels_v5[y][x][1] = pixelXY;
-    pixels_v5[y][x][2] = pixelYX;
-    pixels_v5[y][x][3] = pixelYY;
+    subgrids[idx_xx] = pixelXX;
+    subgrids[idx_xy] = pixelXY;
+    subgrids[idx_yx] = pixelYX;
+    subgrids[idx_yy] = pixelYY;
       
     //} // end x
   }   // end y

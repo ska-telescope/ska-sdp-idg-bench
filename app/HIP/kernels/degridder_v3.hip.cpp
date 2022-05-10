@@ -47,24 +47,12 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
     int x = i % subgrid_size;
     int y = i / subgrid_size;
 
-      // Load aterm for station1
-      int station1_index = (aterm_index * nr_stations + station1) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm1_ptr = &aterms[station1_index];
-
-      // Load aterm for station2
-      int station2_index = (aterm_index * nr_stations + station2) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm2_ptr = &aterms[station2_index];
-
       // Load spheroidal
       float sph = spheroidal[y * subgrid_size + x];
 
       // Load uv values
+      float2 pixels_[NR_CORRELATIONS];
+
       float2 pixelXX;
       float2 pixelXY;
       float2 pixelYX;
@@ -80,7 +68,7 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
       pixelYX = sph * subgrids[idx_yx];
       pixelYY = sph * subgrids[idx_yy];
 
-          // Load aterm for station1
+              // Load aterm for station1
     float2 aXX1, aXY1, aYX1, aYY1;
     read_aterm(subgrid_size, nr_stations, aterm_index, station1, y, x, aterms,
                &aXX1, &aXY1, &aYX1, &aYY1);
@@ -98,11 +86,11 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
 
 
 
+
     pixels_v3[y][x][0] = pixelXX;
     pixels_v3[y][x][1] = pixelXY;
     pixels_v3[y][x][2] = pixelYX;
     pixels_v3[y][x][3] = pixelYY;
-      
     //} // end x
   }   // end y
 
@@ -113,13 +101,11 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
                          (2 * M_PI / image_size);
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
-  // Iterate all timesteps
   for (int time_offset_local = tid; time_offset_local < nr_timesteps; time_offset_local+=nr_threads) {
     // Load UVW coordinates
     float u = uvw[time_offset_global + time_offset_local].u;
     float v = uvw[time_offset_global + time_offset_local].v;
     float w = uvw[time_offset_global + time_offset_local].w;
-
     // Iterate all channels
     for (int chan = 0; chan < nr_channels; chan++) {
 
@@ -129,9 +115,12 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
       float2 sumYX = make_float2(0, 0);
       float2 sumYY = make_float2(0, 0);
 
-      // Iterate all pixels in subgrid
-      for (int y = 0; y < subgrid_size; y++) {
-        for (int x = 0; x < subgrid_size; x++) {
+    // Iterate all pixels in subgrid
+  for (int i = 0; i < subgrid_size * subgrid_size; i ++) {
+    // for (int x = 0; x < subgrid_size; x++) {
+    //  Initialize pixel for every polarization
+    int x = i % subgrid_size;
+    int y = i / subgrid_size;
 
           // Compute l,m,n
           const float l = compute_l(x, subgrid_size, image_size);
@@ -171,14 +160,8 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
           sumYY.y += pixels_v3[y][x][3].y * phasor.x;
 
 
-          sumXX += pixels_v3[y][x][0] * phasor;
-          sumXY += pixels_v3[y][x][1] * phasor;
-          sumYX += pixels_v3[y][x][2] * phasor;
-          sumYY += pixels_v3[y][x][3] * phasor;
-        } // end for x
+       // } // end for x
       }   // end for y
-
-      size_t index = (time_offset_global + time_offset_local) * nr_channels + chan;
 
       int idx_time = time_offset_global + time_offset_local;
 
@@ -187,10 +170,10 @@ kernel_degridder_v3(const int grid_size, int subgrid_size, float image_size,
       int indexYX = index_visibility(nr_channels, idx_time, chan, 2);
       int indexYY = index_visibility(nr_channels, idx_time, chan, 3);
 
-      visibilities[indexXX] = sumXX;
-      visibilities[indexXY] = sumXY;
-      visibilities[indexYX] = sumYX;
-      visibilities[indexYY] = sumYY;
+      visibilities[indexXX] += sumXX;
+      visibilities[indexXY] += sumXY;
+      visibilities[indexYX] += sumYX;
+      visibilities[indexYY] += sumYY;
     } // end for channel
   }   // end for time
 }
