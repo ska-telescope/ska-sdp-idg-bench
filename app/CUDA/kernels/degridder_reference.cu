@@ -17,7 +17,6 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
   int tid = tidx + tidy * blockDim.x;
-  int nr_threads = blockDim.x * blockDim.y;
   int s = blockIdx.x;
 
   // Find offset of first subgrid

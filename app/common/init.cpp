@@ -6,8 +6,6 @@ void initialize_uvw(unsigned int grid_size,
   unsigned int nr_baselines = uvw.get_y_dim();
   unsigned int nr_timesteps = uvw.get_x_dim();
 
-  float u_increment = grid_size / (float)nr_baselines;
-  float v_increment = grid_size / (float)nr_timesteps;
   for (unsigned bl = 0; bl < nr_baselines; bl++) {
     // Get random radius
     float radius_u =
@@ -138,10 +136,9 @@ void initialize_metadata(unsigned int grid_size, unsigned int nr_timeslots,
                          const idg::Array1D<idg::Baseline> &baselines,
                          idg::Array1D<idg::Metadata> &metadata) {
   unsigned int nr_baselines = baselines.get_x_dim();
-  unsigned int nr_subgrids = metadata.get_x_dim();
 
-  for (auto bl = 0; bl < nr_baselines; bl++) {
-    for (auto ts = 0; ts < nr_timeslots; ts++) {
+  for (unsigned int bl = 0; bl < nr_baselines; bl++) {
+    for (unsigned int ts = 0; ts < nr_timeslots; ts++) {
       // Metadata settings
       int baseline_offset = 0;
       int time_offset =
@@ -188,7 +185,7 @@ void initialize_uvw_offsets(unsigned int subgrid_size, unsigned int grid_size,
                             idg::Array2D<float> &uvw_offsets) {
   unsigned int nr_subgrids = metadata.get_x_dim();
 
-  for (int i = 0; i < nr_subgrids; i++) {
+  for (unsigned int i = 0; i < nr_subgrids; i++) {
     idg::Metadata m = metadata(i);
     idg::Coordinate c = m.coordinate;
 
@@ -203,7 +200,6 @@ void initialize_uvw_offsets(unsigned int subgrid_size, unsigned int grid_size,
 
 void initialize_lmn(float image_size, idg::Array3D<float> &lmn) {
   unsigned int height = lmn.get_z_dim();
-  unsigned int width = lmn.get_y_dim();
 
   assert(height == width);
   assert(lmn.get_x_dim() == 3);
