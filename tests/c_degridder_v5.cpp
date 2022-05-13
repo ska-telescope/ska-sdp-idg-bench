@@ -75,12 +75,12 @@ int main() {
                                  aterms, metadata, subgrids);
   std::cout << ">>> Run on gpu" << std::endl;
 #if defined(BUILD_CUDA)
-  cuda::c_run_degridder_v4(nr_subgrids, grid_size, subgrid_size,
+  cuda::c_run_degridder_v5(nr_subgrids, grid_size, subgrid_size,
                                   IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
                                   uvw, wavenumbers, gpu_visibilities,
                                   spheroidal, aterms, metadata, subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_degridder_v4(nr_subgrids, grid_size, subgrid_size,
+  hip::c_run_degridder_v5(nr_subgrids, grid_size, subgrid_size,
                                  IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
                                  uvw, wavenumbers, gpu_visibilities, spheroidal,
                                  aterms, metadata, subgrids);
