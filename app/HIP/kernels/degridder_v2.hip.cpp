@@ -2,19 +2,10 @@
 #include "math.hip.hpp"
 #include "util.hip.hpp"
 
-
-// not possible to pass it as input
-#define SUBGRID_SIZE 32
-
-// Storage
-__shared__ float2 pixels_v2[SUBGRID_SIZE][SUBGRID_SIZE][NR_CORRELATIONS];
-
 namespace hip {
-
 __global__ void
-kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
-                    float w_step_in_lambda,
-                    int nr_channels, // channel_offset? for the macro?
+kernel_degridder_v2(int grid_size, int subgrid_size, float image_size,
+                    float w_step_in_lambda, int nr_channels,
                     int nr_stations, idg::UVWCoordinate<float> *uvw,
                     float *wavenumbers, float2 *visibilities, float *spheroidal,
                     float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
@@ -40,49 +31,6 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
   const int y_coordinate = m.coordinate.y;
   const float w_offset_in_lambda = w_step_in_lambda * (m.coordinate.z + 0.5);
 
-  // Iterate all pixels in subgrid
-  for (int i = tid; i < subgrid_size * subgrid_size; i += nr_threads) {
-    // for (int x = 0; x < subgrid_size; x++) {
-    //  Initialize pixel for every polarization
-    int x = i % subgrid_size;
-    int y = i / subgrid_size;
-
-      // Load aterm for station1
-      int station1_index = (aterm_index * nr_stations + station1) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm1_ptr = &aterms[station1_index];
-
-      // Load aterm for station2
-      int station2_index = (aterm_index * nr_stations + station2) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm2_ptr = &aterms[station2_index];
-
-      // Load spheroidal
-      float sph = spheroidal[y * subgrid_size + x];
-
-      // Load uv values
-      float2 pixels_[NR_CORRELATIONS];
-      for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-        unsigned idx_subgrid =
-            s * NR_CORRELATIONS * subgrid_size * subgrid_size +
-            pol * subgrid_size * subgrid_size + y * subgrid_size + x;
-        pixels_[pol] = sph * subgrids[idx_subgrid];
-      }
-
-      // Apply aterm
-      apply_aterm_degridder(pixels_, aterm1_ptr, aterm2_ptr);
-
-      // Store pixels
-      for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-        pixels_v2[y][x][pol] = pixels_[pol];
-      }
-    //} // end x
-  }   // end y
-
   // Compute u and v offset in wavelenghts
   const float u_offset = (x_coordinate + subgrid_size / 2 - grid_size / 2) *
                          (2 * M_PI / image_size);
@@ -91,7 +39,11 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = tid; time < nr_timesteps; time+=nr_threads) {
+  for (int time = tid; time < nr_timesteps; time += nr_threads) {
+    if (time >= nr_timesteps) {
+      break;
+    }
+
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;
@@ -106,12 +58,37 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
         sum[k] = make_float2(0, 0);
       }
 
-    // Iterate all pixels in subgrid
-  for (int i = 0; i < subgrid_size * subgrid_size; i ++) {
-    // for (int x = 0; x < subgrid_size; x++) {
-    //  Initialize pixel for every polarization
-    int x = i % subgrid_size;
-    int y = i / subgrid_size;
+      // Iterate all pixels
+      for (int y = 0; y < subgrid_size; y++) {
+        for (int x = 0; x < subgrid_size; x++) {
+          // Load aterm for station1
+          int station1_index = (aterm_index * nr_stations + station1) *
+                                   subgrid_size * subgrid_size * NR_CORRELATIONS +
+                               y * subgrid_size * NR_CORRELATIONS +
+                               x * NR_CORRELATIONS;
+          const float2 *aterm1_ptr = &aterms[station1_index];
+
+          // Load aterm for station2
+          int station2_index = (aterm_index * nr_stations + station2) *
+                                   subgrid_size * subgrid_size * NR_CORRELATIONS +
+                               y * subgrid_size * NR_CORRELATIONS +
+                               x * NR_CORRELATIONS;
+          const float2 *aterm2_ptr = &aterms[station2_index];
+
+          // Load spheroidal
+          float sph = spheroidal[y * subgrid_size + x];
+
+          // Load pixels
+          float2 pixels[NR_CORRELATIONS];
+          for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
+            unsigned idx_subgrid =
+                s * NR_CORRELATIONS * subgrid_size * subgrid_size +
+                pol * subgrid_size * subgrid_size + y * subgrid_size + x;
+            pixels[pol] = sph * subgrids[idx_subgrid];
+          }
+
+          // Apply aterm
+          apply_aterm_degridder(pixels, aterm1_ptr, aterm2_ptr);
 
           // Compute l,m,n
           const float l = compute_l(x, subgrid_size, image_size);
@@ -131,11 +108,12 @@ kernel_degridder_v2(const int grid_size, int subgrid_size, float image_size,
           float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-            sum[pol] += pixels_v2[y][x][pol] * phasor;
+            sum[pol] += pixels[pol] * phasor;
           }
-       // } // end for x
+        } // end for x
       }   // end for y
 
+      // Store visibility
       size_t index = (time_offset + time) * nr_channels + chan;
       for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
         visibilities[index * NR_CORRELATIONS + pol] = sum[pol];
@@ -164,5 +142,4 @@ void c_run_degridder_v2(
                   visibilities, spheroidal, aterms, metadata, subgrids,
                   (void *)kernel_degridder_v2, 128);
 }
-
 } // namespace hip
