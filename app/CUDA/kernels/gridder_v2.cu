@@ -82,7 +82,6 @@ kernel_gridder_v2(const int grid_size, int subgrid_size, float image_size,
         size_t index = (time_offset + time) * nr_channels + chan;
         for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
           float2 visibility = visibilities[index * NR_CORRELATIONS + pol];
-          int tmp = (index * NR_CORRELATIONS + pol);
           pixels[pol] += visibility * phasor;
         }
       }

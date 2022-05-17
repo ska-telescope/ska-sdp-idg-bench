@@ -127,9 +127,8 @@ void print_visibilities(
     unsigned i) {
   format_saver(&std::cout);
 
-  unsigned nr_subgrids = visibilities.get_z_dim();
-  unsigned nr_timesteps = visibilities.get_y_dim();
-  unsigned nr_channels = visibilities.get_x_dim();
+  unsigned int nr_timesteps = visibilities.get_y_dim();
+  unsigned int nr_channels = visibilities.get_x_dim();
 
   std::cout << ">>> baseline: " << i << std::endl;
   for (unsigned time = 0;
@@ -160,9 +159,8 @@ void print_visibilities_diff(
 
   assert(visibilities1.bytes() == visibilities2.bytes());
 
-  unsigned nr_subgrids = visibilities1.get_z_dim();
-  unsigned nr_timesteps = visibilities1.get_y_dim();
-  unsigned nr_channels = visibilities1.get_x_dim();
+  unsigned int nr_timesteps = visibilities1.get_y_dim();
+  unsigned int nr_channels = visibilities1.get_x_dim();
 
   std::cout << ">>> baseline: " << i << std::endl;
   for (unsigned time = 0;

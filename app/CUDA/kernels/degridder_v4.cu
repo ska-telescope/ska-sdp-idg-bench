@@ -53,20 +53,6 @@ kernel_degridder_v4_(int grid_size, int subgrid_size, float image_size,
     int x = i % subgrid_size;
     int y = i / subgrid_size;
 
-      // Load aterm for station1
-      int station1_index = (aterm_index * nr_stations + station1) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm1_ptr = &aterms[station1_index];
-
-      // Load aterm for station2
-      int station2_index = (aterm_index * nr_stations + station2) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm2_ptr = &aterms[station2_index];
-
       // Load spheroidal
       float sph = spheroidal[y * subgrid_size + x];
 

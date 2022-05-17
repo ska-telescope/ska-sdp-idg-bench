@@ -89,9 +89,10 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
                   std::string func_name = "", double gflops = 0,
                   double gbytes = 0, double mvis = 0) {
   float seconds;
-  double avg_time, joules, avg_joules;
+  double avg_time, avg_joules = 0;
   std::vector<double> ex_joules, ex_time;
 #ifdef ENABLE_POWERSENSOR
+  double joules;
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
   powersensor::State start, end;
