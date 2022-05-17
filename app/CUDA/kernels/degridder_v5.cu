@@ -36,69 +36,6 @@ kernel_degridder_v5(int grid_size, int subgrid_size, float image_size,
   const int y_coordinate = m.coordinate.y;
   const float w_offset_in_lambda = w_step_in_lambda * (m.coordinate.z + 0.5);
 
-<<<<<<< HEAD
-  for (int i = tid; i < current_nr_channels; i += nr_threads) {
-    wavenumbers_d_v5_[i] = wavenumbers[i + channel_offset];
-  }
-
-  __syncthreads();
-
-  // Iterate all pixels in subgrid
-  if(channel_offset==0){
-  for (int i = tid; i < subgrid_size * subgrid_size; i += nr_threads) {
-    // for (int x = 0; x < subgrid_size; x++) {
-    //  Initialize pixel for every polarization
-    int x = i % subgrid_size;
-    int y = i / subgrid_size;
-
-      // Load spheroidal
-      float sph = spheroidal[y * subgrid_size + x];
-
-      // Load uv values
-      float2 pixelXX;
-      float2 pixelXY;
-      float2 pixelYX;
-      float2 pixelYY;
-
-      int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i);
-      int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i);
-      int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i);
-      int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i);
-
-      pixelXX = sph * subgrids[idx_xx];
-      pixelXY = sph * subgrids[idx_xy];
-      pixelYX = sph * subgrids[idx_yx];
-      pixelYY = sph * subgrids[idx_yy];
-
-          // Load aterm for station1
-    float2 aXX1, aXY1, aYX1, aYY1;
-    read_aterm(subgrid_size, nr_stations, aterm_index, station1, y, x, aterms,
-               &aXX1, &aXY1, &aYX1, &aYY1);
-
-    // Load aterm for station2
-    float2 aXX2, aXY2, aYX2, aYY2;
-    read_aterm(subgrid_size, nr_stations, aterm_index, station2, y, x, aterms,
-               &aXX2, &aXY2, &aYX2, &aYY2);
-
-    // Apply the conjugate transpose of the A-term
-    apply_aterm(
-                aXX1, aYX1, aXY1, aYY1,
-                aXX2, aYX2, aXY2, aYY2,
-                pixelXX, pixelXY, pixelYX, pixelYY);
-
-
-
-    subgrids[idx_xx] = pixelXX;
-    subgrids[idx_xy] = pixelXY;
-    subgrids[idx_yx] = pixelYX;
-    subgrids[idx_yy] = pixelYY;
-      
-    //} // end x
-  }   // end y
-  }
-
-=======
->>>>>>> 32b6c92... Reimplement CUDA degridder_v5
   // Compute u and v offset in wavelenghts
   const float u_offset = (x_coordinate + subgrid_size / 2 - grid_size / 2) *
                          (2 * M_PI / image_size);
