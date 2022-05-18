@@ -10,10 +10,7 @@ __global__ void kernel_gridder_reference(
     int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
     float2 *visibilities, float *spheroidal, float2 *aterms,
     idg::Metadata *metadata, float2 *subgrids) {
-  int tidx = threadIdx.x;
-  int tidy = threadIdx.y;
-  int tid = tidx + tidy * blockDim.x;
-  int nr_threads = blockDim.x * blockDim.y;
+
   int s = blockIdx.x;
 
   // Find offset of first subgrid
@@ -78,7 +75,6 @@ __global__ void kernel_gridder_reference(
           size_t index = (time_offset + time) * nr_channels + chan;
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
             float2 visibility = visibilities[index * NR_CORRELATIONS + pol];
-            int tmp = (index * NR_CORRELATIONS + pol);
             pixels[pol] += visibility * phasor;
           }
         }

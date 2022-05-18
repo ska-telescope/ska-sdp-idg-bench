@@ -15,10 +15,6 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
                     int nr_stations, idg::UVWCoordinate<float> *uvw,
                     float *wavenumbers, float2 *visibilities, float *spheroidal,
                     float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
-  int tidx = threadIdx.x;
-  int tidy = threadIdx.y;
-  int tid = tidx + tidy * blockDim.x;
-  int nr_threads = blockDim.x * blockDim.y;
   int s = blockIdx.x;
 
   // Find offset of first subgrid
@@ -86,7 +82,7 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = tid; time < nr_timesteps; time++) {
+  for (int time = 0; time < nr_timesteps; time++) {
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;

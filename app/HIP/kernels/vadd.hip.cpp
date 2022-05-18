@@ -57,14 +57,14 @@ void c_run_vadd(std::vector<float> &a, std::vector<float> &b,
   hipCheck(hipMalloc(&d_b, b.size() * sizeof(float)));
   hipCheck(hipMalloc(&d_c, c.size() * sizeof(float)));
 
-  hipMemcpy(d_a, a.data(), a.size() * sizeof(float), hipMemcpyHostToDevice);
-  hipMemcpy(d_b, b.data(), b.size() * sizeof(float), hipMemcpyHostToDevice);
+  hipCheck(hipMemcpy(d_a, a.data(), a.size() * sizeof(float), hipMemcpyHostToDevice));
+  hipCheck(hipMemcpy(d_b, b.data(), b.size() * sizeof(float), hipMemcpyHostToDevice));
 
   void *args[] = {&d_a, &d_b, &d_c, &size};
 
   c_run_kernel((void *)kernel_vadd, dim3(dim[0]), dim3(dim[1]), args);
 
-  hipMemcpy(c.data(), d_c, c.size() * sizeof(float), hipMemcpyDeviceToHost);
+  hipCheck(hipMemcpy(c.data(), d_c, c.size() * sizeof(float), hipMemcpyDeviceToHost));
 
   hipCheck(hipFree(d_a));
   hipCheck(hipFree(d_b));
