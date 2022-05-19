@@ -10,9 +10,6 @@ kernel_degridder_reference(int grid_size, int subgrid_size, float image_size,
                            int nr_stations, idg::UVWCoordinate<float> *uvw,
                            float *wavenumbers, float2 *visibilities, float *spheroidal,
                            float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
-  int tidx = threadIdx.x;
-  int tidy = threadIdx.y;
-  int tid = tidx + tidy * blockDim.x;
   int s = blockIdx.x;
 
   // Find offset of first subgrid
