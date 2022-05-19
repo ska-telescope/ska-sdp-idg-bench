@@ -89,8 +89,8 @@ void kernel_degridder_reference(int nr_subgrids, int grid_size, int subgrid_size
             for (int chan = 0; chan < nr_channels; chan++) {
 
                 // Update all polarizations
-                std::complex<float> sum[NR_CORRELATIONS];
-                memset(sum, 0, NR_CORRELATIONS * sizeof(std::complex<float>));
+                std::array<std::complex<float>, NR_CORRELATIONS> sum;
+                sum.fill(0);
 
                 // Iterate all pixels in subgrid
                 for (int y = 0; y < subgrid_size; y++) {

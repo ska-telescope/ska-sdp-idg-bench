@@ -42,8 +42,8 @@ void kernel_gridder_reference(int nr_subgrids, int grid_size, int subgrid_size,
     for (int y = 0; y < subgrid_size; y++) {
       for (int x = 0; x < subgrid_size; x++) {
         // Initialize pixel for every polarization
-        std::complex<float> pixels[NR_CORRELATIONS];
-        memset(pixels, 0, NR_CORRELATIONS * sizeof(std::complex<float>));
+        std::array<std::complex<float>, NR_CORRELATIONS> pixels;
+        pixels.fill(0);
 
         // Compute l,m,n
         float l = compute_l(x, subgrid_size, image_size);
@@ -96,7 +96,7 @@ void kernel_gridder_reference(int nr_subgrids, int grid_size, int subgrid_size,
         const std::complex<float> *aterm2_ptr = &aterms[station2_index];
 
         // Apply aterm
-        apply_aterm_gridder(pixels, aterm1_ptr, aterm2_ptr);
+        apply_aterm_gridder(&pixels[0], aterm1_ptr, aterm2_ptr);
 
         // Load spheroidal
         float sph = spheroidal[y * subgrid_size + x];
