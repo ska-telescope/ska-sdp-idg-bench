@@ -1,14 +1,4 @@
-#pragma once
-
-#include "lib-common.hpp"
-#include <hip/hip_runtime.h>
-
-#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
-#include <powersensor/NVMLPowerSensor.h>
-#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
-#include <powersensor/ROCMPowerSensor.h>
-#endif
-
+#include "util.hpp"
 
 namespace hip {
 
@@ -24,17 +14,17 @@ inline void hipAssert(hipError_t code, const char *file, int line,
   }
 }
 
-inline std::string get_device_name() {
+std::string get_device_name() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   std::string device_name = prop.name;
   std::replace(device_name.begin(), device_name.end(), ' ', '_');
   return device_name;
 }
 
-inline void print_device_info() {
+void print_device_info() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   std::cout << std::endl;
   std::cout << "Device Name " << prop.name << std::endl;
   std::cout << "  Memory Clock Rate (KHz): " << prop.memoryClockRate
@@ -50,37 +40,37 @@ inline void print_device_info() {
   std::cout << std::endl;
 }
 
-inline std::vector<int> get_launch_kernel_dimensions() {
+std::vector<int> get_launch_kernel_dimensions() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   return {prop.multiProcessorCount, prop.maxThreadsPerBlock};
 }
 
-inline int get_cu_nr() {
+int get_cu_nr() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   return prop.multiProcessorCount;
 }
 
-inline int get_max_threads() {
+int get_max_threads() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   return prop.maxThreadsPerBlock;
 }
 
-inline int get_gmem_size() {
+int get_gmem_size() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   return prop.totalGlobalMem;
 }
 
-inline int get_cu_freq() {
+int get_cu_freq() {
   hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, 0));
+  hipGetDeviceProperties(&prop, 0);
   return prop.clockRate;
 }
 
-inline void print_dimensions(dim3 gridDim, dim3 blockDim) {
+void print_dimensions(dim3 gridDim, dim3 blockDim) {
   std::cout << "Dimensions: (";
   std::cout << gridDim.x << "," << gridDim.y << "," << gridDim.z;
   std::cout << ") - (";
@@ -88,27 +78,23 @@ inline void print_dimensions(dim3 gridDim, dim3 blockDim) {
   std::cout << ")" << std::endl << std::endl;
 }
 
-template <typename T>
-void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
-                  std::string func_name = "", double gflops = 0,
-                  double gbytes = 0, double mvis = 0) {
+void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
+                  std::string func_name, double gflops,
+                  double gbytes, double mvis) {
   float seconds;
-  double avg_time, joules, avg_joules;
+  double avg_time, avg_joules = 0;
   std::vector<double> ex_joules, ex_time;
-#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
+#ifdef ENABLE_POWERSENSOR
+  double joules;
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
   powersensor::State start, end;
-#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
-  std::unique_ptr<powersensor::PowerSensor> powersensor(
-      powersensor::rocm::ROCMPowerSensor::create(0));
-  powersensor::State start, end;
+  hipEvent_t stop;
 #else
-
   hipEvent_t start, stop;
   hipCheck(hipEventCreate(&start));
-  hipCheck(hipEventCreate(&stop));
 #endif
+  hipCheck(hipEventCreate(&stop));
 
   int nr_warm_up_runs = get_env_var("NR_WARM_UP_RUNS", 2);
   int nr_iterations = get_env_var("NR_ITERATIONS", 5);
@@ -123,57 +109,62 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
 
   for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
 #ifdef ENABLE_POWERSENSOR
-    start = powersensor->read();
+    if (i == nr_warm_up_runs) {
+      start = powersensor->read();
+    }
 #else
     hipCheck(hipEventRecord(start));
 #endif
-    hipCheck(hipLaunchKernel(func, gridDim, blockDim, args, 0, 0));
 
+    hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
+    hipCheck(hipEventRecord(stop));
+    hipCheck(hipEventSynchronize(stop));
+
+    if (nr_iterations > nr_warm_up_runs) {
 #ifdef ENABLE_POWERSENSOR
-    hipCheck(hipDeviceSynchronize());
+    end = powersensor->read();
+    bool is_last_iteration = i == (nr_iterations - 1);
+    double tot_time = powersensor->seconds(start, end);
+    double min_time = 5; // run for at least 5 seconds
+    if (is_last_iteration && tot_time < min_time) {
+      nr_iterations++;
+    }
+#else
+      float milliseconds = 0;
+      hipCheck(hipEventElapsedTime(&milliseconds, start, stop));
+      seconds = milliseconds * 1e-3;
+      ex_time.push_back(seconds);
+#endif
+    }
+  }
+
+    hipDeviceSynchronize();
+#ifdef ENABLE_POWERSENSOR
     end = powersensor->read();
     seconds = powersensor->seconds(start, end);
     joules = powersensor->Joules(start, end);
-    ex_joules.push_back(joules);
+    avg_joules = joules / nr_iterations;
+    avg_time = seconds / nr_iterations;
 #else
-    hipCheck(hipEventRecord(stop));
-
-    hipCheck(hipEventSynchronize(stop));
-
-    float milliseconds = 0;
-    hipCheck(hipEventElapsedTime(&milliseconds, start, stop));
-    seconds = milliseconds * 1e-3;
-#endif
-    ex_time.push_back(seconds);
-  }
-
-#ifdef ENABLE_POWERSENSOR
-  avg_joules = std::accumulate(ex_joules.begin() + nr_warm_up_runs,
-                               ex_joules.end(), 0.0) /
-               (ex_joules.size() - nr_warm_up_runs);
-#endif
-
   avg_time =
-      std::accumulate(ex_time.begin() + nr_warm_up_runs, ex_time.end(), 0.0) /
-      (ex_time.size() - nr_warm_up_runs);
+      std::accumulate(ex_time.begin(), ex_time.end(), 0.0) / ex_time.size();
+#endif
 
   report(func_name, avg_time, gflops, gbytes, mvis, avg_joules);
   report_csv(func_name, get_device_name(), "-hip.csv", avg_time, gflops,
              gbytes, mvis, avg_joules);
 }
 
-template <typename T>
-void c_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args) {
+void c_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args) {
 
 #ifdef DEBUG
   print_device_info();
   print_dimensions(gridDim, blockDim);
 #endif
-  hipCheck(hipLaunchKernel(func, gridDim, blockDim, args, 0, 0));
+  hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
 }
 
-template <typename T>
-void p_run_gridder(const T *func, std::string func_name, int num_threads) {
+void p_run_gridder_(const void *func, std::string func_name, int num_threads) {
 
   float image_size = IMAGE_SIZE;
   float w_step_in_lambda = W_STEP;
@@ -231,8 +222,8 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
                                         sizeof(float2)));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-   hipCheck(hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             hipMemcpyHostToDevice));
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -252,8 +243,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   hipCheck(hipFree(d_subgrids));
 }
 
-template <typename T>
-void c_run_gridder(
+void c_run_gridder_(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -262,7 +252,7 @@ void c_run_gridder(
     idg::Array2D<float> &spheroidal,
     idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
     idg::Array1D<idg::Metadata> &metadata,
-    idg::Array4D<std::complex<float>> &subgrids, const T *func,
+    idg::Array4D<std::complex<float>> &subgrids, const void *func,
     int num_threads) {
 
   std::vector<int> dim = {nr_subgrids, num_threads};
@@ -280,16 +270,16 @@ void c_run_gridder(
   hipCheck(hipMalloc(&d_subgrids, subgrids.bytes()));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-  hipCheck(hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_visibilities, visibilities.data(), visibilities.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             hipMemcpyHostToDevice));
+  hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_visibilities, visibilities.data(), visibilities.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -299,8 +289,8 @@ void c_run_gridder(
 
   c_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args);
 
-  hipCheck(hipMemcpy(subgrids.data(), d_subgrids, subgrids.bytes(),
-             hipMemcpyDeviceToHost));
+  hipMemcpy(subgrids.data(), d_subgrids, subgrids.bytes(),
+             hipMemcpyDeviceToHost);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));
@@ -311,8 +301,7 @@ void c_run_gridder(
   hipCheck(hipFree(d_subgrids));
 }
 
-template <typename T>
-void p_run_degridder(const T *func, std::string func_name, int num_threads) {
+void p_run_degridder_(const void *func, std::string func_name, int num_threads) {
 
   float image_size = IMAGE_SIZE;
   float w_step_in_lambda = W_STEP;
@@ -370,13 +359,8 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
                                         sizeof(float2)));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-  hipCheck(hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             hipMemcpyHostToDevice));
-
-  for(int i=0; i<metadata.size(); i++)
-  {
-  //printf("Stations: %d  %d, subgrid %d\n", metadata.data()[i].baseline.station1, metadata.data()[i].baseline.station2, i);
-  }
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -396,8 +380,7 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   hipCheck(hipFree(d_subgrids));
 }
 
-template <typename T>
-void c_run_degridder(
+void c_run_degridder_(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -406,7 +389,7 @@ void c_run_degridder(
     idg::Array2D<float> &spheroidal,
     idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
     idg::Array1D<idg::Metadata> &metadata,
-    idg::Array4D<std::complex<float>> &subgrids, const T *func,
+    idg::Array4D<std::complex<float>> &subgrids, const void *func,
     int num_threads) {
 
   std::vector<int> dim = {nr_subgrids, num_threads};
@@ -424,16 +407,16 @@ void c_run_degridder(
   hipCheck(hipMalloc(&d_subgrids, subgrids.bytes()));
   hipCheck(hipMalloc(&d_metadata, metadata.bytes()));
 
-  hipCheck(hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
-             hipMemcpyHostToDevice));
-  hipCheck(hipMemcpy(d_subgrids, subgrids.data(), subgrids.bytes(),
-             hipMemcpyHostToDevice));
+  hipMemcpy(d_uvw, uvw.data(), uvw.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_wavenumbers, wavenumbers.data(), wavenumbers.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_spheroidal, spheroidal.data(), spheroidal.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_aterms, aterms.data(), aterms.bytes(), hipMemcpyHostToDevice);
+  hipMemcpy(d_metadata, metadata.data(), metadata.bytes(),
+             hipMemcpyHostToDevice);
+  hipMemcpy(d_subgrids, subgrids.data(), subgrids.bytes(),
+             hipMemcpyHostToDevice);
 
   void *args[] = {
       &grid_size,      &subgrid_size, &image_size, &w_step_in_lambda,
@@ -443,8 +426,8 @@ void c_run_degridder(
 
   c_run_kernel((void *)func, dim3(dim[0]), dim3(dim[1]), args);
 
-  hipCheck(hipMemcpy(visibilities.data(), d_visibilities, visibilities.bytes(),
-             hipMemcpyDeviceToHost));
+  hipMemcpy(visibilities.data(), d_visibilities, visibilities.bytes(),
+             hipMemcpyDeviceToHost);
 
   hipCheck(hipFree(d_uvw));
   hipCheck(hipFree(d_wavenumbers));
@@ -454,5 +437,7 @@ void c_run_degridder(
   hipCheck(hipFree(d_metadata));
   hipCheck(hipFree(d_subgrids));
 }
+
+void print_benchmark() { std::cout << ">>> hip IDG BENCHMARK" << std::endl; }
 
 } // namespace hip

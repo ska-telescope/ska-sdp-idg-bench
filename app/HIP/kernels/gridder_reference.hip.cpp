@@ -1,6 +1,7 @@
 #include "../common/math.hpp"
+#include "../common/types.hpp"
 #include "math.hip.hpp"
-#include "util.hip.hpp"
+#include "util.hpp"
 
 namespace hip {
 
@@ -10,7 +11,6 @@ __global__ void kernel_gridder_reference(
     int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
     float2 *visibilities, float *spheroidal, float2 *aterms,
     idg::Metadata *metadata, float2 *subgrids) {
-
   int s = blockIdx.x;
 
   // Find offset of first subgrid
@@ -110,11 +110,11 @@ __global__ void kernel_gridder_reference(
   }
 }
 
-void p_run_gridder_reference() {
-  p_run_gridder((void *)kernel_gridder_reference, "gridder_reference", 1);
+void p_run_gridder() {
+  p_run_gridder_((void *)kernel_gridder_reference, "gridder_reference", 1);
 }
 
-void c_run_gridder_reference(
+void c_run_gridder(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -125,10 +125,10 @@ void c_run_gridder_reference(
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids) {
 
-  c_run_gridder(nr_subgrids, grid_size, subgrid_size, image_size,
-                w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
-                visibilities, spheroidal, aterms, metadata, subgrids,
-                (void *)kernel_gridder_reference, 1);
+  c_run_gridder_(nr_subgrids, grid_size, subgrid_size, image_size,
+                 w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
+                 visibilities, spheroidal, aterms, metadata, subgrids,
+                 (void *)kernel_gridder_reference, 1);
 }
 
 } // namespace hip

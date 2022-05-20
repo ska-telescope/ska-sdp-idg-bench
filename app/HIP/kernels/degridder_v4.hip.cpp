@@ -1,6 +1,6 @@
 #include "../common/math.hpp"
 #include "math.hip.hpp"
-#include "util.hip.hpp"
+#include "util.hpp"
 
 #define NUM_THREADS 128
 
@@ -164,11 +164,11 @@ kernel_degridder_v4(int grid_size, int subgrid_size, float image_size,
   } // end for i (pixels)
 }
 
-void p_run_degridder_v4() {
-  p_run_degridder((void *)kernel_degridder_v4, "degridder_v4", NUM_THREADS);
+void p_run_degridder() {
+  p_run_degridder_((void *)kernel_degridder_v4, "degridder_v4", NUM_THREADS);
 }
 
-void c_run_degridder_v4(
+void c_run_degridder(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -179,10 +179,10 @@ void c_run_degridder_v4(
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids) {
 
-  c_run_degridder(nr_subgrids, grid_size, subgrid_size, image_size,
-                  w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
-                  visibilities, spheroidal, aterms, metadata, subgrids,
-                  (void *)kernel_degridder_v4, NUM_THREADS);
+  c_run_degridder_(nr_subgrids, grid_size, subgrid_size, image_size,
+                   w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
+                   visibilities, spheroidal, aterms, metadata, subgrids,
+                   (void *)kernel_degridder_v4, NUM_THREADS);
 }
 
 } // namespace hip

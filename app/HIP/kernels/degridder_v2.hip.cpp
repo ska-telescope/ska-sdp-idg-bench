@@ -1,8 +1,9 @@
 #include "../common/math.hpp"
 #include "math.hip.hpp"
-#include "util.hip.hpp"
+#include "util.hpp"
 
 namespace hip {
+
 __global__ void
 kernel_degridder_v2(int grid_size, int subgrid_size, float image_size,
                     float w_step_in_lambda, int nr_channels,
@@ -122,11 +123,11 @@ kernel_degridder_v2(int grid_size, int subgrid_size, float image_size,
   }   // end for time
 }
 
-void p_run_degridder_v2() {
-  p_run_degridder((void *)kernel_degridder_v2, "degridder_v2", 128);
+void p_run_degridder() {
+  p_run_degridder_((void *)kernel_degridder_v2, "degridder_v2", 128);
 }
 
-void c_run_degridder_v2(
+void c_run_degridder(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -137,9 +138,10 @@ void c_run_degridder_v2(
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids) {
 
-  c_run_degridder(nr_subgrids, grid_size, subgrid_size, image_size,
-                  w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
-                  visibilities, spheroidal, aterms, metadata, subgrids,
-                  (void *)kernel_degridder_v2, 128);
+  c_run_degridder_(nr_subgrids, grid_size, subgrid_size, image_size,
+                   w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
+                   visibilities, spheroidal, aterms, metadata, subgrids,
+                   (void *)kernel_degridder_v2, 128);
 }
+
 } // namespace hip

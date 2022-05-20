@@ -10,7 +10,11 @@
 
 #include "test_util.hpp"
 
+#if defined(BUILD_CUDA)
 namespace cuda
+#elif defined(BUILD_HIP)
+namespace hip
+#endif
 {
   void p_run_degridder();
 
@@ -26,11 +30,15 @@ namespace cuda
       idg::Array4D<std::complex<float>> &subgrids);
 }
 
+
 void run_performance()
 {
+#if defined(BUILD_CUDA) 
   cuda::print_device_info();
-#if defined(BUILD_CUDA) || defined(BUILD_HIP)
   cuda::p_run_degridder();
+#elif defined(BUILD_HIP)
+  hip::print_device_info();
+  hip::p_run_degridder();
 #endif
 }
 
@@ -41,7 +49,7 @@ void run_correctness()
   cuda::print_device_info();
   cuda::print_benchmark();
 #elif defined(BUILD_HIP)
-  hip::extern_print_device_info();
+  hip::print_device_info();
   hip::print_benchmark();
 #endif
 
@@ -49,7 +57,7 @@ void run_correctness()
   int nr_correlations = get_env_var("NR_CORRELATIONS", 4);
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
-  int nr_stations = get_env_var("NR_STATIONS", 10);
+  int nr_stations = get_env_var("NR_STATIONS", 2);
   int nr_timeslots = get_env_var("NR_TIMESLOTS", 2);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
@@ -107,10 +115,10 @@ void run_correctness()
                         gpu_visibilities, spheroidal, aterms, metadata,
                         subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_degridder_v1(nr_subgrids, grid_size, subgrid_size,
-                          IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
-                          uvw, wavenumbers, gpu_visibilities, spheroidal,
-                          aterms, metadata, subgrids);
+  hip::c_run_degridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
+                        W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
+                        gpu_visibilities, spheroidal, aterms, metadata,
+                        subgrids);
 #endif
 
   std::cout << ">>> Checking" << std::endl;

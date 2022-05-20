@@ -1,20 +1,16 @@
 #include "../common/math.hpp"
 #include "math.hip.hpp"
-#include "util.hip.hpp"
+#include "util.hpp"
 
-
-// not possible to pass it as input
-#define SUBGRID_SIZE 32
 
 namespace hip {
 
 __global__ void
-kernel_degridder_reference(const int grid_size, int subgrid_size, float image_size,
-                    float w_step_in_lambda,
-                    int nr_channels, // channel_offset? for the macro?
-                    int nr_stations, idg::UVWCoordinate<float> *uvw,
-                    float *wavenumbers, float2 *visibilities, float *spheroidal,
-                    float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
+kernel_degridder_reference(int grid_size, int subgrid_size, float image_size,
+                           float w_step_in_lambda, int nr_channels,
+                           int nr_stations, idg::UVWCoordinate<float> *uvw,
+                           float *wavenumbers, float2 *visibilities, float *spheroidal,
+                           float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
   int s = blockIdx.x;
 
   // Find offset of first subgrid
@@ -32,47 +28,6 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   const int x_coordinate = m.coordinate.x;
   const int y_coordinate = m.coordinate.y;
   const float w_offset_in_lambda = w_step_in_lambda * (m.coordinate.z + 0.5);
-  // Storage
-  float2 pixels[SUBGRID_SIZE][SUBGRID_SIZE][NR_CORRELATIONS];
-
-  // Apply aterm to subgrid
-  for (int y = 0; y < subgrid_size; y++) {
-    for (int x = 0; x < subgrid_size; x++) {
-      // Load aterm for station1
-      int station1_index = (aterm_index * nr_stations + station1) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm1_ptr = &aterms[station1_index];
-
-      // Load aterm for station2
-      int station2_index = (aterm_index * nr_stations + station2) *
-                               subgrid_size * subgrid_size * NR_CORRELATIONS +
-                           y * subgrid_size * NR_CORRELATIONS +
-                           x * NR_CORRELATIONS;
-      const float2 *aterm2_ptr = &aterms[station2_index];
-
-      // Load spheroidal
-      float sph = spheroidal[y * subgrid_size + x];
-
-      // Load uv values
-      float2 pixels_[NR_CORRELATIONS];
-      for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-        unsigned idx_subgrid =
-            s * NR_CORRELATIONS * subgrid_size * subgrid_size +
-            pol * subgrid_size * subgrid_size + y * subgrid_size + x;
-        pixels_[pol] = sph * subgrids[idx_subgrid];
-      }
-
-      // Apply aterm
-      apply_aterm_degridder(pixels_, aterm1_ptr, aterm2_ptr);
-
-      // Store pixels
-      for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-        pixels[y][x][pol] = pixels_[pol];
-      }
-    } // end x
-  }   // end y
 
   // Compute u and v offset in wavelenghts
   const float u_offset = (x_coordinate + subgrid_size / 2 - grid_size / 2) *
@@ -97,9 +52,37 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
         sum[k] = make_float2(0, 0);
       }
 
-      // Iterate all pixels in subgrid
+      // Iterate all pixels
       for (int y = 0; y < subgrid_size; y++) {
         for (int x = 0; x < subgrid_size; x++) {
+          // Load aterm for station1
+          int station1_index = (aterm_index * nr_stations + station1) *
+                                   subgrid_size * subgrid_size * NR_CORRELATIONS +
+                               y * subgrid_size * NR_CORRELATIONS +
+                               x * NR_CORRELATIONS;
+          const float2 *aterm1_ptr = &aterms[station1_index];
+
+          // Load aterm for station2
+          int station2_index = (aterm_index * nr_stations + station2) *
+                                   subgrid_size * subgrid_size * NR_CORRELATIONS +
+                               y * subgrid_size * NR_CORRELATIONS +
+                               x * NR_CORRELATIONS;
+          const float2 *aterm2_ptr = &aterms[station2_index];
+
+          // Load spheroidal
+          float sph = spheroidal[y * subgrid_size + x];
+
+          // Load pixels
+          float2 pixels[NR_CORRELATIONS];
+          for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
+            unsigned idx_subgrid =
+                s * NR_CORRELATIONS * subgrid_size * subgrid_size +
+                pol * subgrid_size * subgrid_size + y * subgrid_size + x;
+            pixels[pol] = sph * subgrids[idx_subgrid];
+          }
+
+          // Apply aterm
+          apply_aterm_degridder(pixels, aterm1_ptr, aterm2_ptr);
 
           // Compute l,m,n
           const float l = compute_l(x, subgrid_size, image_size);
@@ -119,11 +102,12 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
           float2 phasor = make_float2(cosf(phase), sinf(phase));
 
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-            sum[pol] += pixels[y][x][pol] * phasor;
+            sum[pol] += pixels[pol] * phasor;
           }
         } // end for x
       }   // end for y
 
+      // Store visibility
       size_t index = (time_offset + time) * nr_channels + chan;
       for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
         visibilities[index * NR_CORRELATIONS + pol] = sum[pol];
@@ -132,11 +116,11 @@ kernel_degridder_reference(const int grid_size, int subgrid_size, float image_si
   }   // end for time
 }
 
-void p_run_degridder_reference() {
-  p_run_degridder((void *)kernel_degridder_reference, "degridder_reference", 1);
+void p_run_degridder() {
+  p_run_degridder_((void *)kernel_degridder_reference, "degridder_reference", 1);
 }
 
-void c_run_degridder_reference(
+void c_run_degridder(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -147,10 +131,10 @@ void c_run_degridder_reference(
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids) {
 
-  c_run_degridder(nr_subgrids, grid_size, subgrid_size, image_size,
-                  w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
-                  visibilities, spheroidal, aterms, metadata, subgrids,
-                  (void *)kernel_degridder_reference, 1);
+  c_run_degridder_(nr_subgrids, grid_size, subgrid_size, image_size,
+                   w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
+                   visibilities, spheroidal, aterms, metadata, subgrids,
+                   (void *)kernel_degridder_reference, 1);
 }
 
 } // namespace hip
