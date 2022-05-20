@@ -1,10 +1,4 @@
-#pragma once
-
-#include "lib-common.hpp"
-
-#ifdef ENABLE_POWERSENSOR
-#include <powersensor/NVMLPowerSensor.h>
-#endif
+#include "util.hpp"
 
 namespace cuda {
 
@@ -20,7 +14,7 @@ inline void cudaAssert(cudaError_t code, const char *file, int line,
   }
 }
 
-inline std::string get_device_name() {
+std::string get_device_name() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   std::string device_name = prop.name;
@@ -28,7 +22,7 @@ inline std::string get_device_name() {
   return device_name;
 }
 
-inline void print_device_info() {
+void print_device_info() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   std::cout << std::endl;
@@ -46,37 +40,37 @@ inline void print_device_info() {
   std::cout << std::endl;
 }
 
-inline std::vector<int> get_launch_kernel_dimensions() {
+std::vector<int> get_launch_kernel_dimensions() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   return {prop.multiProcessorCount, prop.maxThreadsPerBlock};
 }
 
-inline int get_cu_nr() {
+int get_cu_nr() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   return prop.multiProcessorCount;
 }
 
-inline int get_max_threads() {
+int get_max_threads() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   return prop.maxThreadsPerBlock;
 }
 
-inline int get_gmem_size() {
+int get_gmem_size() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   return prop.totalGlobalMem;
 }
 
-inline int get_cu_freq() {
+int get_cu_freq() {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);
   return prop.clockRate;
 }
 
-inline void print_dimensions(dim3 gridDim, dim3 blockDim) {
+void print_dimensions(dim3 gridDim, dim3 blockDim) {
   std::cout << "Dimensions: (";
   std::cout << gridDim.x << "," << gridDim.y << "," << gridDim.z;
   std::cout << ") - (";
@@ -84,10 +78,9 @@ inline void print_dimensions(dim3 gridDim, dim3 blockDim) {
   std::cout << ")" << std::endl << std::endl;
 }
 
-template <typename T>
-void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
-                  std::string func_name = "", double gflops = 0,
-                  double gbytes = 0, double mvis = 0) {
+void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
+                  std::string func_name, double gflops,
+                  double gbytes, double mvis) {
   float seconds;
   double avg_time, avg_joules = 0;
   std::vector<double> ex_joules, ex_time;
@@ -154,8 +147,7 @@ void p_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args,
              gbytes, mvis, avg_joules);
 }
 
-template <typename T>
-void c_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args) {
+void c_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args) {
 
 #ifdef DEBUG
   print_device_info();
@@ -164,8 +156,7 @@ void c_run_kernel(const T *func, dim3 gridDim, dim3 blockDim, void **args) {
   cudaLaunchKernel(func, gridDim, blockDim, args);
 }
 
-template <typename T>
-void p_run_gridder(const T *func, std::string func_name, int num_threads) {
+void p_run_gridder_(const void *func, std::string func_name, int num_threads) {
 
   float image_size = IMAGE_SIZE;
   float w_step_in_lambda = W_STEP;
@@ -244,8 +235,7 @@ void p_run_gridder(const T *func, std::string func_name, int num_threads) {
   cudaCheck(cudaFree(d_subgrids));
 }
 
-template <typename T>
-void c_run_gridder(
+void c_run_gridder_(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -254,7 +244,7 @@ void c_run_gridder(
     idg::Array2D<float> &spheroidal,
     idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
     idg::Array1D<idg::Metadata> &metadata,
-    idg::Array4D<std::complex<float>> &subgrids, const T *func,
+    idg::Array4D<std::complex<float>> &subgrids, const void *func,
     int num_threads) {
 
   std::vector<int> dim = {nr_subgrids, num_threads};
@@ -303,8 +293,7 @@ void c_run_gridder(
   cudaCheck(cudaFree(d_subgrids));
 }
 
-template <typename T>
-void p_run_degridder(const T *func, std::string func_name, int num_threads) {
+void p_run_degridder_(const void *func, std::string func_name, int num_threads) {
 
   float image_size = IMAGE_SIZE;
   float w_step_in_lambda = W_STEP;
@@ -383,8 +372,7 @@ void p_run_degridder(const T *func, std::string func_name, int num_threads) {
   cudaCheck(cudaFree(d_subgrids));
 }
 
-template <typename T>
-void c_run_degridder(
+void c_run_degridder_(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -393,7 +381,7 @@ void c_run_degridder(
     idg::Array2D<float> &spheroidal,
     idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
     idg::Array1D<idg::Metadata> &metadata,
-    idg::Array4D<std::complex<float>> &subgrids, const T *func,
+    idg::Array4D<std::complex<float>> &subgrids, const void *func,
     int num_threads) {
 
   std::vector<int> dim = {nr_subgrids, num_threads};
@@ -441,5 +429,7 @@ void c_run_degridder(
   cudaCheck(cudaFree(d_metadata));
   cudaCheck(cudaFree(d_subgrids));
 }
+
+void print_benchmark() { std::cout << ">>> CUDA IDG BENCHMARK" << std::endl; }
 
 } // namespace cuda

@@ -1,6 +1,6 @@
 #include "../common/math.hpp"
 #include "math.cuh"
-#include "util.cuh"
+#include "util.hpp"
 
 namespace cuda {
 
@@ -154,11 +154,11 @@ kernel_gridder_v3(const int grid_size, int subgrid_size, float image_size,
   }
 }
 
-void p_run_gridder_v3() {
-  p_run_gridder((void *)kernel_gridder_v3, "gridder_v3", 128);
+void p_run_gridder() {
+  p_run_gridder_((void *)kernel_gridder_v3, "gridder_v3", 128);
 }
 
-void c_run_gridder_v3(
+void c_run_gridder(
     int nr_subgrids, int grid_size, int subgrid_size, float image_size,
     float w_step_in_lambda, int nr_channels, int nr_stations,
     idg::Array2D<idg::UVWCoordinate<float>> &uvw,
@@ -169,10 +169,10 @@ void c_run_gridder_v3(
     idg::Array1D<idg::Metadata> &metadata,
     idg::Array4D<std::complex<float>> &subgrids) {
 
-  c_run_gridder(nr_subgrids, grid_size, subgrid_size, image_size,
-                w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
-                visibilities, spheroidal, aterms, metadata, subgrids,
-                (void *)kernel_gridder_v3, 128);
+  c_run_gridder_(nr_subgrids, grid_size, subgrid_size, image_size,
+                 w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
+                 visibilities, spheroidal, aterms, metadata, subgrids,
+                 (void *)kernel_gridder_v3, 128);
 }
 
 } // namespace cuda
