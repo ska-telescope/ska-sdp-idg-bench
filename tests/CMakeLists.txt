@@ -45,6 +45,10 @@ if(BUILD_HIP)
   # KERNEL_SRC is set by app/CUDA/CMakeLists.txt
   file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/HIP/kernels/*.hip.cpp")
 
+  if("${GPU_BRAND}" STREQUAL "AMD")
+  set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+  endif()
+
   # Iterate all kernels
   foreach(kernelsourcepath ${KERNEL_SRC})
 
@@ -65,12 +69,17 @@ if(BUILD_HIP)
 
     # Build the executable
     add_executable(${testname} ${testcommonsource})
-    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app
-                                                  ${CUDAToolkit_INCLUDE_DIRS})
+    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app)
+    if("${GPU_BRAND}" STREQUAL "NVIDIA")
+    target_include_directories(${testname} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+    target_link_libraries(${testname} lib-cpu
+                                      CUDA::cudart CUDA::cuda_driver)
+    endif()
+
     target_link_libraries(${testname} lib-cpu
                                       $<TARGET_OBJECTS:lib-hip>
-                                      $<TARGET_OBJECTS:${testname}-kernel>
-                                      CUDA::cudart CUDA::cuda_driver)
+                                      $<TARGET_OBJECTS:${testname}-kernel>)
+                                      
     target_compile_options(${testname} PRIVATE -DBUILD_HIP)
     if(BUILD_LIBPOWERSENSOR)
       target_link_libraries(${testname} powersensor)

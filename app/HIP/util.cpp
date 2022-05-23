@@ -86,8 +86,16 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
   std::vector<double> ex_joules, ex_time;
 #ifdef ENABLE_POWERSENSOR
   double joules;
+#if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
+#elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
+  std::unique_ptr<powersensor::PowerSensor> powersensor(
+      powersensor::rocm::ROCMPowerSensor::create(0));
+#else
+
+
+  #endif
   powersensor::State start, end;
   hipEvent_t stop;
 #else

@@ -186,7 +186,7 @@ kernel_degridder_v6(int grid_size, int subgrid_size, float image_size,
                     visibility[pol] = make_float2(0, 0);
                 }
 
-                float u, v, w;
+                float u = 0, v = 0, w = 0;
 
                 if (time < time_end) {
                     u = uvw[time].u;
