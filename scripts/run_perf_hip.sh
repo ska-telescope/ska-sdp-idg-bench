@@ -5,5 +5,5 @@ done
 
 for i in {1..6}
 do
-    ./install/bin/hip-degridder_v{i}
+    ./install/bin/hip-degridder_v${i}
 done
