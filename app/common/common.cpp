@@ -65,6 +65,7 @@ void report_csv(std::string name, std::string device_name,
     std::cout << "Saving output in " << file_path << std::endl;
 
     std::ofstream output;
+    device_name = std::regex_replace(device_name, std::regex("/"), "-");
     std::cout << file_path + "/" + device_name + "-" + name + file_extension
               << std::endl;
     output.open(file_path + "/" + device_name + "-" + name + file_extension);

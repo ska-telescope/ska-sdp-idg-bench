@@ -12,6 +12,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "init.hpp"
 //#include "math.hpp"
