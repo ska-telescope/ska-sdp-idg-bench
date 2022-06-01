@@ -83,26 +83,18 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
                   double gbytes, double mvis) {
   float seconds;
   double avg_time, avg_joules = 0;
-  std::vector<double> ex_joules, ex_time;
-#ifdef ENABLE_POWERSENSOR
-  double joules;
 #if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
-  std::unique_ptr<powersensor::PowerSensor> powersensor(
+ std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::rocm::ROCMPowerSensor::create(0));
-#else
-
-
-  #endif
-  powersensor::State start, end;
-  hipEvent_t stop;
-#else
-  hipEvent_t start, stop;
-  hipCheck(hipEventCreate(&start));
+  powersensor::State startState, endState;
 #endif
-  hipCheck(hipEventCreate(&stop));
+
+  hipEvent_t startEvent, endEvent;
+  hipCheck(hipEventCreate(&startEvent));
+  hipCheck(hipEventCreate(&endEvent));
 
   int nr_warm_up_runs = get_env_var("NR_WARM_UP_RUNS", 2);
   int nr_iterations = get_env_var("NR_ITERATIONS", 5);
@@ -115,49 +107,62 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
   std::cout << "NR_ITERATIONS: " << nr_iterations << std::endl;
 #endif
 
-  for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
-#ifdef ENABLE_POWERSENSOR
-    if (i == nr_warm_up_runs) {
-      start = powersensor->read();
-    }
-#else
-    hipCheck(hipEventRecord(start));
-#endif
-
+  // Run warm-up
+  hipCheck(hipEventRecord(startEvent));
+  for (int i = 0; i < nr_warm_up_runs; i++) {
     hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
-    hipCheck(hipEventRecord(stop));
-    hipCheck(hipEventSynchronize(stop));
-
-    if (nr_iterations > nr_warm_up_runs) {
-#ifdef ENABLE_POWERSENSOR
-    end = powersensor->read();
-    bool is_last_iteration = i == (nr_iterations - 1);
-    double tot_time = powersensor->seconds(start, end);
-    double min_time = 5; // run for at least 5 seconds
-    if (is_last_iteration && tot_time < min_time) {
-      nr_iterations++;
-    }
-#else
-      float milliseconds = 0;
-      hipCheck(hipEventElapsedTime(&milliseconds, start, stop));
-      seconds = milliseconds * 1e-3;
-      ex_time.push_back(seconds);
-#endif
-    }
   }
+  hipCheck(hipEventRecord(endEvent));
+  hipCheck(hipEventSynchronize(endEvent));
 
-    hipDeviceSynchronize();
+  // Set the actual number of iterations based on how long the warm-up took
+  float milliseconds = 0;
+  hipCheck(hipEventElapsedTime(&milliseconds, startEvent, endEvent));
+  seconds = milliseconds * 1e-3;
+  nr_iterations = 5.0 / (seconds / nr_warm_up_runs);
+
+  // Run benchmark
+  hipCheck(hipEventRecord(startEvent));
+  hipCheck(hipEventSynchronize(startEvent));
+  for (int i = 0; i < nr_iterations; i++) {
+    hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
+  }
+  hipCheck(hipEventRecord(endEvent));
+  hipCheck(hipEventSynchronize(endEvent));
+
+  // Compute average kernel runtime
+  hipCheck(hipEventElapsedTime(&milliseconds, startEvent, endEvent));
+  seconds = milliseconds * 1e-3;
+  avg_time = seconds / nr_iterations;
+
+  // Energy measurement
 #ifdef ENABLE_POWERSENSOR
-    end = powersensor->read();
-    seconds = powersensor->seconds(start, end);
-    joules = powersensor->Joules(start, end);
-    avg_joules = joules / nr_iterations;
-    avg_time = seconds / nr_iterations;
-#else
-  avg_time =
-      std::accumulate(ex_time.begin(), ex_time.end(), 0.0) / ex_time.size();
+  volatile bool stop = false;
+  std::thread thread
+      (std::thread([&]()
+  {
+    for (int i = 0; !stop; i++) {
+        hipLaunchKernel(func, gridDim, blockDim, args, 0, 0);
+        if (i % 2 == 1) {
+            hipDeviceSynchronize();
+        }
+    }
+  }));
+
+  // Start and end the measurement while the kernel is running
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  startState = powersensor->read();
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  endState = powersensor->read();
+  stop = true;
+  thread.join();
+
+  // Compute average energy consumption
+  float avg_watt = powersensor->Watt(startState, endState);
+  avg_joules = avg_watt * avg_time;
 #endif
 
+  // Reporting
   report(func_name, avg_time, gflops, gbytes, mvis, avg_joules);
   report_csv(func_name, get_device_name(), "-hip.csv", avg_time, gflops,
              gbytes, mvis, avg_joules);
