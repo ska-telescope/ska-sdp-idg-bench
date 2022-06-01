@@ -201,8 +201,11 @@ void initialize_uvw_offsets(unsigned int subgrid_size, unsigned int grid_size,
 void initialize_lmn(float image_size, idg::Array3D<float> &lmn) {
   unsigned int height = lmn.get_z_dim();
 
+#if defined(DEBUG)
+  unsigned int width = lmn.get_y_dim();
   assert(height == width);
   assert(lmn.get_x_dim() == 3);
+#endif
 
   unsigned int subgrid_size = height;
 
