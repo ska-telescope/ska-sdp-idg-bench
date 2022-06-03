@@ -83,18 +83,16 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
                   double gbytes, double mvis) {
   float seconds;
   double avg_time, avg_joules = 0;
-  std::vector<double> ex_joules, ex_time;
 #ifdef ENABLE_POWERSENSOR
-  double joules;
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
-  powersensor::State start, end;
-  cudaEvent_t stop;
+  powersensor::State startState, endState;
 #else
-  cudaEvent_t start, stop;
-  cudaCheck(cudaEventCreate(&start));
 #endif
-  cudaCheck(cudaEventCreate(&stop));
+
+  cudaEvent_t startEvent, endEvent;
+  cudaCheck(cudaEventCreate(&startEvent));
+  cudaCheck(cudaEventCreate(&endEvent));
 
   int nr_warm_up_runs = get_env_var("NR_WARM_UP_RUNS", 2);
   int nr_iterations = get_env_var("NR_ITERATIONS", 5);
@@ -107,49 +105,61 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
   std::cout << "NR_ITERATIONS: " << nr_iterations << std::endl;
 #endif
 
-  for (int i = 0; i < nr_iterations + nr_warm_up_runs; i++) {
-#ifdef ENABLE_POWERSENSOR
-    if (i == nr_warm_up_runs) {
-      start = powersensor->read();
-    }
-#else
-    cudaCheck(cudaEventRecord(start));
-#endif
-
+  // Run warm-up
+  cudaCheck(cudaEventRecord(startEvent));
+  for (int i = 0; i < nr_warm_up_runs; i++) {
     cudaLaunchKernel(func, gridDim, blockDim, args);
-    cudaCheck(cudaEventRecord(stop));
-    cudaCheck(cudaEventSynchronize(stop));
-
-    if (nr_iterations > nr_warm_up_runs) {
-#ifdef ENABLE_POWERSENSOR
-    end = powersensor->read();
-    bool is_last_iteration = i == (nr_iterations - 1);
-    double tot_time = powersensor->seconds(start, end);
-    double min_time = 5; // run for at least 5 seconds
-    if (is_last_iteration && tot_time < min_time) {
-      nr_iterations++;
-    }
-#else
-      float milliseconds = 0;
-      cudaCheck(cudaEventElapsedTime(&milliseconds, start, stop));
-      seconds = milliseconds * 1e-3;
-      ex_time.push_back(seconds);
-#endif
-    }
   }
+  cudaCheck(cudaEventRecord(endEvent));
+  cudaCheck(cudaEventSynchronize(endEvent));
 
-    cudaDeviceSynchronize();
+  // Set the actual number of iterations based on how long the warm-up took
+  float milliseconds = 0;
+  cudaCheck(cudaEventElapsedTime(&milliseconds, startEvent, endEvent));
+  seconds = milliseconds * 1e-3;
+  nr_iterations = std::max(1, int(5.0 / (seconds / nr_warm_up_runs)));
+
+  // Run benchmark
+  cudaCheck(cudaEventRecord(startEvent));
+  for (int i = 0; i < nr_iterations; i++) {
+    cudaLaunchKernel(func, gridDim, blockDim, args);
+  }
+  cudaCheck(cudaEventRecord(endEvent));
+  cudaCheck(cudaEventSynchronize(endEvent));
+
+  // Compute average kernel runtime
+  cudaCheck(cudaEventElapsedTime(&milliseconds, startEvent, endEvent));
+  seconds = milliseconds * 1e-3;
+  avg_time = seconds / nr_iterations;
+
+  // Energy measurement
 #ifdef ENABLE_POWERSENSOR
-    end = powersensor->read();
-    seconds = powersensor->seconds(start, end);
-    joules = powersensor->Joules(start, end);
-    avg_joules = joules / nr_iterations;
-    avg_time = seconds / nr_iterations;
-#else
-  avg_time =
-      std::accumulate(ex_time.begin(), ex_time.end(), 0.0) / ex_time.size();
+  volatile bool stop = false;
+  std::thread thread
+      (std::thread([&]()
+  {
+    for (int i = 0; !stop; i++) {
+        cudaLaunchKernel(func, gridDim, blockDim, args);
+        if (i % 2 == 1) {
+            cudaDeviceSynchronize();
+        }
+    }
+  }));
+
+  // Start and end the measurement while the kernel is running
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  startState = powersensor->read();
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  endState = powersensor->read();
+  stop = true;
+  thread.join();
+
+  // Compute average energy consumption
+  float avg_watt = powersensor->Watt(startState, endState);
+  avg_joules = avg_watt * avg_time;
 #endif
 
+  // Reporting
   report(func_name, avg_time, gflops, gbytes, mvis, avg_joules);
   report_csv(func_name, get_device_name(), "-cuda.csv", avg_time, gflops,
              gbytes, mvis, avg_joules);
