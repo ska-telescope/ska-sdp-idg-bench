@@ -31,18 +31,16 @@ if(BUILD_CUDA)
                                       CUDA::cudart CUDA::cuda_driver)
     target_compile_options(${testname} PRIVATE -DBUILD_CUDA)
     if(BUILD_LIBPOWERSENSOR)
-      target_link_libraries(${testname} powersensor)
+      find_package(Threads REQUIRED)
+      target_link_libraries(${testname} powersensor Threads::Threads)
     endif()
     install(TARGETS ${testname} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
   endforeach(kernelsourcepath ${KERNEL_SRC})
 endif()
 
-# TODO: Update HIP like CUDA
-file(GLOB TESTS_SRC "./*.cpp")
-
 
 if(BUILD_HIP)
-  # KERNEL_SRC is set by app/CUDA/CMakeLists.txt
+  # KERNEL_SRC is set by app/HIP/CMakeLists.txt
   file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/HIP/kernels/*.hip.cpp")
 
   if("${GPU_BRAND}" STREQUAL "AMD")
@@ -79,10 +77,10 @@ if(BUILD_HIP)
     target_link_libraries(${testname} lib-cpu
                                       $<TARGET_OBJECTS:lib-hip>
                                       $<TARGET_OBJECTS:${testname}-kernel>)
-                                      
     target_compile_options(${testname} PRIVATE -DBUILD_HIP)
     if(BUILD_LIBPOWERSENSOR)
-      target_link_libraries(${testname} powersensor)
+      find_package(Threads REQUIRED)
+      target_link_libraries(${testname} powersensor Threads::Threads)
     endif()
     install(TARGETS ${testname} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
   endforeach(kernelsourcepath ${KERNEL_SRC})
