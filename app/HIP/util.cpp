@@ -86,6 +86,7 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
 #if defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_NVIDIA__)
   std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::nvml::NVMLPowerSensor::create());
+  powersensor::State startState, endState;
 #elif defined(ENABLE_POWERSENSOR) && defined(__HIP_PLATFORM_AMD__)
  std::unique_ptr<powersensor::PowerSensor> powersensor(
       powersensor::rocm::ROCMPowerSensor::create(0));
