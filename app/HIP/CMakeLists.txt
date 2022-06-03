@@ -1,6 +1,6 @@
 if("${GPU_BRAND}" STREQUAL "NVIDIA")
 project(lib-hip CXX CUDA)
-set(CMAKE_CUDA_COMPILER ${HIP_HIPCC_EXECUTABLE})
+set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 elseif("${GPU_BRAND}" STREQUAL "AMD")
 project(lib-hip CXX)
 set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
@@ -8,7 +8,6 @@ endif()
 
 # Set platform specific options
 if("${GPU_BRAND}" STREQUAL "NVIDIA")
-target_include_directories(lib-hip PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
 set(GPU_ARCH sm_${CUDA_ARCH_LIST})
 add_compile_options(-D__HIP_PLATFORM_NVIDIA__ -D__CUDACC__
                                            --gpu-architecture=${GPU_ARCH})
