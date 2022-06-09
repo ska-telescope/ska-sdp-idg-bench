@@ -7,8 +7,8 @@ namespace hip {
 
 __global__ void kernel_gridder_reference(
     const int grid_size, int subgrid_size, float image_size,
-    float w_step_in_lambda, int nr_channels, // channel_offset? for the macro?
-    int nr_stations, idg::UVWCoordinate<float> *uvw, float *wavenumbers,
+    float w_step_in_lambda, int nr_channels, int nr_stations,
+    idg::UVWCoordinate<float> *uvw, float *wavenumbers,
     float2 *visibilities, float *spheroidal, float2 *aterms,
     idg::Metadata *metadata, float2 *subgrids) {
   int s = blockIdx.x;
@@ -49,6 +49,7 @@ __global__ void kernel_gridder_reference(
       float l = compute_l(x, subgrid_size, image_size);
       float m = compute_m(y, subgrid_size, image_size);
       float n = compute_n(l, m);
+
       // Iterate all timesteps
       for (int time = 0; time < nr_timesteps; time++) {
         // Load UVW coordinates
@@ -71,7 +72,6 @@ __global__ void kernel_gridder_reference(
           float2 phasor = make_float2(cosf(phase), sinf(phase));
 
           // Update pixel for every polarization
-
           size_t index = (time_offset + time) * nr_channels + chan;
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
             float2 visibility = visibilities[index * NR_CORRELATIONS + pol];
@@ -93,6 +93,7 @@ __global__ void kernel_gridder_reference(
                            y * subgrid_size * NR_CORRELATIONS +
                            x * NR_CORRELATIONS;
       float2 *aterm2_ptr = &aterms[station2_index];
+
       // Apply aterm
       apply_aterm_gridder(pixels, aterm1_ptr, aterm2_ptr);
 
@@ -105,9 +106,9 @@ __global__ void kernel_gridder_reference(
             s * NR_CORRELATIONS * subgrid_size * subgrid_size +
             pol * subgrid_size * subgrid_size + y * subgrid_size + x;
         subgrids[idx_subgrid] = pixels[pol] * sph;
-      }
-    }
-  }
+      } // end for pol
+    } // end for x
+  } // end for y
 }
 
 void p_run_gridder() {

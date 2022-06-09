@@ -2,18 +2,17 @@
 #include "math.hip.hpp"
 #include "util.hpp"
 
-
-__shared__ float2 visibilities_v6_[BATCH_SIZE][NR_CORRELATIONS];
-__shared__ float4 uvw_v6_[BATCH_SIZE];
-__shared__ float wavenumbers_v6_[MAX_NR_CHANNELS];
+__shared__ float2 visibilities_[BATCH_SIZE][NR_CORRELATIONS];
+__shared__ float4 uvw_[BATCH_SIZE];
+__shared__ float wavenumbers_[MAX_NR_CHANNELS];
 
 template <int current_nr_channels>
 __device__ void
-kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
+kernel_gridder_(const int grid_size, int subgrid_size, float image_size,
                    float w_step_in_lambda, int nr_channels,
-                   int channel_offset, // channel_offset? for the macro?
-                   int nr_stations, idg::UVWCoordinate<float> *uvw,
-                   float *wavenumbers, float2 *visibilities, float *spheroidal,
+                   int channel_offset, int nr_stations,
+                   idg::UVWCoordinate<float> *uvw, float *wavenumbers,
+                   float2 *visibilities, float *spheroidal,
                    float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
   int tidx = threadIdx.x;
   int tidy = threadIdx.y;
@@ -48,12 +47,12 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
       subgrids[idx_xy] = make_float2(0, 0);
       subgrids[idx_yx] = make_float2(0, 0);
       subgrids[idx_yy] = make_float2(0, 0);
-    }
+    } // end for i
   }
 
   for (int i = tid; i < current_nr_channels; i += nr_threads) {
-    wavenumbers_v6_[i] = wavenumbers[i + channel_offset];
-  }
+    wavenumbers_[i] = wavenumbers[i + channel_offset];
+  } // end for i
 
   __syncthreads();
 
@@ -67,11 +66,8 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
   // Iterate all pixels in subgrid
   for (int i = tid; i < subgrid_size * subgrid_size;
        i += nr_threads * UNROLL_PIXELS) {
-    // for (int x = 0; x < subgrid_size; x++) {
-    //  Initialize pixel for every polarization
-    // int x = i % subgrid_size;
-    // int y = i / subgrid_size;
 
+    // Initialize pixel for every polarization
     float2 pixelXX[UNROLL_PIXELS];
     float2 pixelXY[UNROLL_PIXELS];
     float2 pixelYX[UNROLL_PIXELS];
@@ -98,8 +94,8 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
       phase_offset[p] = u_offset * l[p] + v_offset * m[p] + w_offset * n[p];
     }
 
-    int current_nr_timesteps = BATCH_SIZE / MAX_NR_CHANNELS;
     // Iterate all timesteps
+    int current_nr_timesteps = BATCH_SIZE / MAX_NR_CHANNELS;
     for (int time_offset_local = 0; time_offset_local < nr_timesteps;
          time_offset_local += current_nr_timesteps) {
       current_nr_timesteps =
@@ -107,10 +103,12 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
               ? nr_timesteps - time_offset_local
               : current_nr_timesteps;
       __syncthreads();
+
+      // Load UVW coordinates
       for (int time = tid; time < current_nr_timesteps; time += nr_threads) {
         idg::UVWCoordinate<float> a =
             uvw[time_offset_global + time_offset_local + time];
-        uvw_v6_[time] = make_float4(a.u, a.v, a.w, 0);
+        uvw_[time] = make_float4(a.u, a.v, a.w, 0);
       }
 
       // Load visibilities
@@ -123,19 +121,19 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
         int indexXY = index_visibility(nr_channels, idx_time, idx_chan, 1);
         int indexYX = index_visibility(nr_channels, idx_time, idx_chan, 2);
         int indexYY = index_visibility(nr_channels, idx_time, idx_chan, 3);
-        visibilities_v6_[k][0] = visibilities[indexXX];
-        visibilities_v6_[k][1] = visibilities[indexXY];
-        visibilities_v6_[k][2] = visibilities[indexYX];
-        visibilities_v6_[k][3] = visibilities[indexYY];
+        visibilities_[k][0] = visibilities[indexXX];
+        visibilities_[k][1] = visibilities[indexXY];
+        visibilities_[k][2] = visibilities[indexYX];
+        visibilities_[k][3] = visibilities[indexYY];
       }
       __syncthreads();
 
       for (int time = 0; time < current_nr_timesteps; time++) {
-
         // Load UVW coordinates
-        float u = uvw_v6_[time].x;
-        float v = uvw_v6_[time].y;
-        float w = uvw_v6_[time].z;
+        float u = uvw_[time].x;
+        float v = uvw_[time].y;
+        float w = uvw_[time].z;
+
         for (int p = 0; p < UNROLL_PIXELS; p++) {
           // Compute phase index
           float phase_index = u * l[p] + v * m[p] + w * n[p];
@@ -143,22 +141,22 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
           for (int chan = 0; chan < current_nr_channels; chan++) {
             // Compute phase
             float phase =
-                phase_offset[p] - (phase_index * wavenumbers_v6_[chan]);
+                phase_offset[p] - (phase_index * wavenumbers_[chan]);
 
             // Compute phasor
             float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
-            // Update pixel for every polarization
-
+            // Load visibilities
             float2 visXX =
-                visibilities_v6_[time * current_nr_channels + chan][0];
+                visibilities_[time * current_nr_channels + chan][0];
             float2 visXY =
-                visibilities_v6_[time * current_nr_channels + chan][1];
+                visibilities_[time * current_nr_channels + chan][1];
             float2 visYX =
-                visibilities_v6_[time * current_nr_channels + chan][2];
+                visibilities_[time * current_nr_channels + chan][2];
             float2 visYY =
-                visibilities_v6_[time * current_nr_channels + chan][3];
+                visibilities_[time * current_nr_channels + chan][3];
 
+            // Update pixel for every polarization
             pixelXX[p].x += phasor.x * visXX.x;
             pixelXX[p].y += phasor.x * visXX.y;
             pixelXX[p].x -= phasor.y * visXX.y;
@@ -178,12 +176,12 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
             pixelYY[p].y += phasor.x * visYY.y;
             pixelYY[p].x -= phasor.y * visYY.y;
             pixelYY[p].y += phasor.y * visYY.x;
-          }
-        }
-      }
-    }
-    for (int p = 0; p < UNROLL_PIXELS; p++) {
+          } // end for chan
+        } // end for p
+      } // end for time
+    } // end for time_offset_local
 
+    for (int p = 0; p < UNROLL_PIXELS; p++) {
       int x = (i + p * nr_threads) % subgrid_size;
       int y = (i + p * nr_threads) / subgrid_size;
 
@@ -202,10 +200,10 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
                   conj(aYX2), conj(aXY2), conj(aYY2), pixelXX[p], pixelXY[p],
                   pixelYX[p], pixelYY[p]);
 
-      // Load a term for station1
       // Load spheroidal
       float sph = spheroidal[y * subgrid_size + x];
 
+      // Set subgrid value
       int idx_xx = index_subgrid(subgrid_size, s, 0, 0, i + p * nr_threads);
       int idx_xy = index_subgrid(subgrid_size, s, 1, 0, i + p * nr_threads);
       int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i + p * nr_threads);
@@ -215,15 +213,14 @@ kernel_gridder_v6_(const int grid_size, int subgrid_size, float image_size,
       subgrids[idx_xy] += pixelXY[p] * sph;
       subgrids[idx_yx] += pixelYX[p] * sph;
       subgrids[idx_yy] += pixelYY[p] * sph;
-    }
-    // }
-  }
+    } // end for p
+  } // end for i
 }
 
 #define KERNEL_GRIDDER_TEMPLATE(current_nr_channels)                           \
   for (; (channel_offset + current_nr_channels) <= nr_channels;                \
        channel_offset += current_nr_channels) {                                \
-    kernel_gridder_v6_<current_nr_channels>(                                   \
+    kernel_gridder_<current_nr_channels>(                                      \
         grid_size, subgrid_size, image_size, w_step_in_lambda, nr_channels,    \
         channel_offset, nr_stations, uvw, wavenumbers, visibilities,           \
         spheroidal, aterms, metadata, subgrids);                               \
@@ -234,8 +231,7 @@ namespace hip {
 __global__ void
 
 kernel_gridder_v6(const int grid_size, int subgrid_size, float image_size,
-                  float w_step_in_lambda,
-                  int nr_channels, // channel_offset? for the macro?
+                  float w_step_in_lambda, int nr_channels,
                   int nr_stations, idg::UVWCoordinate<float> *uvw,
                   float *wavenumbers, float2 *visibilities, float *spheroidal,
                   float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
