@@ -145,11 +145,10 @@ kernel_gridder_v3(const int grid_size, int subgrid_size, float image_size,
     int idx_yx = index_subgrid(subgrid_size, s, 2, 0, i);
     int idx_yy = index_subgrid(subgrid_size, s, 3, 0, i);
 
-    subgrids[idx_xx] += pixelXX * sph;
-    subgrids[idx_xy] += pixelXY * sph;
-    subgrids[idx_yx] += pixelYX * sph;
-    subgrids[idx_yy] += pixelYY * sph;
-
+    subgrids[idx_xx] = pixelXX * sph;
+    subgrids[idx_xy] = pixelXY * sph;
+    subgrids[idx_yx] = pixelYX * sph;
+    subgrids[idx_yy] = pixelYY * sph;
     // }
   }
 }
