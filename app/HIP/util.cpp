@@ -116,12 +116,6 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
   hipCheck(hipEventRecord(endEvent));
   hipCheck(hipEventSynchronize(endEvent));
 
-  // Set the actual number of iterations based on how long the warm-up took
-  float milliseconds = 0;
-  hipCheck(hipEventElapsedTime(&milliseconds, startEvent, endEvent));
-  seconds = milliseconds * 1e-3;
-  nr_iterations = max(1, int(5.0 / (seconds / nr_warm_up_runs)));
-
   // Run benchmark
   hipCheck(hipEventRecord(startEvent));
   hipCheck(hipEventSynchronize(startEvent));
@@ -132,6 +126,7 @@ void p_run_kernel(const void *func, dim3 gridDim, dim3 blockDim, void **args,
   hipCheck(hipEventSynchronize(endEvent));
 
   // Compute average kernel runtime
+  float milliseconds = 0;
   hipCheck(hipEventElapsedTime(&milliseconds, startEvent, endEvent));
   seconds = milliseconds * 1e-3;
   avg_time = seconds / nr_iterations;
