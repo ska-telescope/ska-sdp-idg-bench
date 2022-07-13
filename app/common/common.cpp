@@ -50,7 +50,7 @@ void report(std::string name, double seconds, double gflops, double gbytes,
     double mvis_j = mvis / joules;
     std::cout << ", " << std::setw(w2) << watt << " W";
     std::cout << ", " << std::setw(w2) << efficiency << " GFLOP/s/W";
-    std::cout << ", " << std::setw(w2) << mvis_j << " Mvis/J";
+    std::cout << ", " << std::setw(w2) << mvis_j << " MVis/J";
   }
   std::cout << std::endl;
 }
@@ -91,7 +91,7 @@ void report_csv(std::string name, std::string device_name,
       double mvis_j = mvis / joules;
       output << "W," << watt << "\n";
       output << "GFLOP/s/W," << efficiency << "\n";
-      output << "Mvis/J," << mvis_j << "\n";
+      output << "MVis/J," << mvis_j << "\n";
     }
     output.close();
   }
