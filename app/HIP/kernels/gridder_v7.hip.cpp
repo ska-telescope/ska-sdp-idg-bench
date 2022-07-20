@@ -2,7 +2,6 @@
 #include "math.hip.hpp"
 #include "util.hpp"
 
-
 __shared__ float4 visibilities_[BATCH_SIZE][2];
 __shared__ float4 uvw_[BATCH_SIZE];
 __shared__ float wavenumbers_[MAX_NR_CHANNELS];
