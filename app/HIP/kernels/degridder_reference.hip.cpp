@@ -2,7 +2,6 @@
 #include "math.hip.hpp"
 #include "util.hpp"
 
-
 namespace hip {
 
 __global__ void
