@@ -6,26 +6,18 @@ include(CMakeDependentOption)
 include(CheckLanguage)
 include(ExternalProject)
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
+
 option(BUILD_LIBPOWERSENSOR OFF)
 
 if(BUILD_LIBPOWERSENSOR)
-  set(EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR
-      ${CMAKE_SOURCE_DIR}/external/libpowersensor)
-  ExternalProject_Add(
-    libpowersensor
-    GIT_REPOSITORY https://gitlab.com/astron-misc/libpowersensor.git
-    GIT_TAG master
-    # add other arguments if needed such as build with CUDA and find the
-    # necessary packages above such as FFTW
-    CMAKE_ARGS
-      -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}
-      -DBUILD_LIKWID_POWERSENSOR=OFF -DBUILD_ARDUINO_POWERSENSOR=OFF
-      -DBUILD_NVML_POWERSENSOR=${BUILD_CUDA}
-    # Uncomment the next line if you want to always build the external project
-    # BUILD_ALWAYS 1
-  )
-  include_directories(${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}/include)
-  link_directories(${EXTERNAL_INSTALL_LOCATION_LIBPOWERSENSOR}/lib)
+   find_package(PowerSensor REQUIRED)
+endif()
+
+if(${POWERSENSOR_FOUND})
+   set(HAVE_POWERSENSOR TRUE)
+   include_directories(${POWERSENSOR_INCLUDE_DIR})
+   link_directories(${POWERSENSOR_LIBRARY})
 endif()
 
 option(BUILD_CPU "Build CPU version (check GPU correctness)" ON)
@@ -79,8 +71,6 @@ if(BUILD_CUDA AND "${GPU_BRAND}" STREQUAL "NVIDIA")
 
   set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH_LIST})
 endif()
-
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 if(BUILD_HIP)
   find_package(HIP REQUIRED)
