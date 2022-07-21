@@ -16,24 +16,22 @@ namespace cuda
 namespace hip
 #endif
 {
-  void p_run_degridder();
+void p_run_degridder();
 
-  void c_run_degridder(
-      int nr_subgrids, int grid_size, int subgrid_size, float image_size,
-      float w_step_in_lambda, int nr_channels, int nr_stations,
-      idg::Array2D<idg::UVWCoordinate<float>> &uvw,
-      idg::Array1D<float> &wavenumbers,
-      idg::Array3D<idg::Visibility<std::complex<float>>> &visibilities,
-      idg::Array2D<float> &spheroidal,
-      idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
-      idg::Array1D<idg::Metadata> &metadata,
-      idg::Array4D<std::complex<float>> &subgrids);
-}
+void c_run_degridder(
+    int nr_subgrids, int grid_size, int subgrid_size, float image_size,
+    float w_step_in_lambda, int nr_channels, int nr_stations,
+    idg::Array2D<idg::UVWCoordinate<float>> &uvw,
+    idg::Array1D<float> &wavenumbers,
+    idg::Array3D<idg::Visibility<std::complex<float>>> &visibilities,
+    idg::Array2D<float> &spheroidal,
+    idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
+    idg::Array1D<idg::Metadata> &metadata,
+    idg::Array4D<std::complex<float>> &subgrids);
+} // namespace cuda
 
-
-void run_performance()
-{
-#if defined(BUILD_CUDA) 
+void run_performance() {
+#if defined(BUILD_CUDA)
   cuda::print_device_info();
   cuda::p_run_degridder();
 #elif defined(BUILD_HIP)
@@ -42,8 +40,7 @@ void run_performance()
 #endif
 }
 
-void run_correctness()
-{
+void run_correctness() {
   std::cout << ">>> Correctness IDG-Degridder test" << std::endl;
 #if defined(BUILD_CUDA)
   cuda::print_device_info();
@@ -115,10 +112,10 @@ void run_correctness()
                         gpu_visibilities, spheroidal, aterms, metadata,
                         subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_degridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
-                        W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
-                        gpu_visibilities, spheroidal, aterms, metadata,
-                        subgrids);
+  hip::c_run_degridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE, W_STEP,
+                       nr_channels, nr_stations, uvw, wavenumbers,
+                       gpu_visibilities, spheroidal, aterms, metadata,
+                       subgrids);
 #endif
 
   std::cout << ">>> Checking" << std::endl;
@@ -126,18 +123,13 @@ void run_correctness()
   compare_visibilities(cpu_visibilities, gpu_visibilities);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
-  if (argc == 1)
-  {
+  if (argc == 1) {
     run_performance();
     return EXIT_SUCCESS;
-  }
-  else if (argc == 2)
-  {
-    if (std::strncmp(argv[1], "-c", 2) == 0)
-    {
+  } else if (argc == 2) {
+    if (std::strncmp(argv[1], "-c", 2) == 0) {
       run_correctness();
       return EXIT_SUCCESS;
     }

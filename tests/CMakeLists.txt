@@ -1,6 +1,6 @@
 
 if(BUILD_CUDA)
-  # KERNEL_SRC is set by app/CUDA/CMakeLists.txt
+  # KERNEL_SRC contains the CUDA kernels paths
   file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/CUDA/kernels/*.cu")
 
   # Iterate all kernels
@@ -40,7 +40,7 @@ endif()
 
 
 if(BUILD_HIP)
-  # KERNEL_SRC is set by app/HIP/CMakeLists.txt
+  # KERNEL_SRC contains the HIP kernels paths
   file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/HIP/kernels/*.hip.cpp")
 
   if("${GPU_BRAND}" STREQUAL "AMD")

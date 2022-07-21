@@ -16,24 +16,22 @@ namespace cuda
 namespace hip
 #endif
 {
-  void p_run_gridder();
+void p_run_gridder();
 
-  void c_run_gridder(
-      int nr_subgrids, int grid_size, int subgrid_size, float image_size,
-      float w_step_in_lambda, int nr_channels, int nr_stations,
-      idg::Array2D<idg::UVWCoordinate<float>> &uvw,
-      idg::Array1D<float> &wavenumbers,
-      idg::Array3D<idg::Visibility<std::complex<float>>> &visibilities,
-      idg::Array2D<float> &spheroidal,
-      idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
-      idg::Array1D<idg::Metadata> &metadata,
-      idg::Array4D<std::complex<float>> &subgrids);
-}
+void c_run_gridder(
+    int nr_subgrids, int grid_size, int subgrid_size, float image_size,
+    float w_step_in_lambda, int nr_channels, int nr_stations,
+    idg::Array2D<idg::UVWCoordinate<float>> &uvw,
+    idg::Array1D<float> &wavenumbers,
+    idg::Array3D<idg::Visibility<std::complex<float>>> &visibilities,
+    idg::Array2D<float> &spheroidal,
+    idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
+    idg::Array1D<idg::Metadata> &metadata,
+    idg::Array4D<std::complex<float>> &subgrids);
+} // namespace cuda
 
-
-void run_performance()
-{
-#if defined(BUILD_CUDA) 
+void run_performance() {
+#if defined(BUILD_CUDA)
   cuda::print_device_info();
   cuda::p_run_gridder();
 #elif defined(BUILD_HIP)
@@ -42,8 +40,7 @@ void run_performance()
 #endif
 }
 
-void run_correctness()
-{
+void run_correctness() {
   std::cout << ">>> Correctness IDG-Gridder test" << std::endl;
 #if defined(BUILD_CUDA)
   cuda::print_device_info();
@@ -112,15 +109,13 @@ void run_correctness()
 
   std::cout << ">>> Run on gpu" << std::endl;
 #if defined(BUILD_CUDA)
-  cuda::c_run_gridder(nr_subgrids, grid_size, subgrid_size,
-                      IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
-                      uvw, wavenumbers, visibilities, spheroidal,
-                      aterms, metadata, gpu_subgrids);
+  cuda::c_run_gridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE, W_STEP,
+                      nr_channels, nr_stations, uvw, wavenumbers, visibilities,
+                      spheroidal, aterms, metadata, gpu_subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_gridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
-                     W_STEP, nr_channels, nr_stations, uvw,
-                     wavenumbers, visibilities, spheroidal, aterms,
-                     metadata, gpu_subgrids);
+  hip::c_run_gridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE, W_STEP,
+                     nr_channels, nr_stations, uvw, wavenumbers, visibilities,
+                     spheroidal, aterms, metadata, gpu_subgrids);
 #endif
 
   std::cout << ">>> Checking" << std::endl;
@@ -128,18 +123,13 @@ void run_correctness()
   compare_subgrids(cpu_subgrids, gpu_subgrids);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
-  if (argc == 1)
-  {
+  if (argc == 1) {
     run_performance();
     return EXIT_SUCCESS;
-  }
-  else if (argc == 2)
-  {
-    if (std::strncmp(argv[1], "-c", 2) == 0)
-    {
+  } else if (argc == 2) {
+    if (std::strncmp(argv[1], "-c", 2) == 0) {
       run_correctness();
       return EXIT_SUCCESS;
     }
