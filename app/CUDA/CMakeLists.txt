@@ -2,7 +2,7 @@ project(lib-cuda CXX)
 
 # Build the CUDA utilities library
 add_library(lib-cuda OBJECT util.cpp)
-target_include_directories(lib-cuda PUBLIC ${CMAKE_SOURCE_DIR}/app
+target_include_directories(lib-cuda PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..
                                            ${CUDAToolkit_INCLUDE_DIRS})
 if(BUILD_LIBPOWERSENSOR)
   target_compile_options(lib-cuda PRIVATE -DENABLE_POWERSENSOR)
@@ -22,7 +22,7 @@ foreach(kernelsourcepath ${KERNEL_SRC})
 
   # Build the library
   add_library(${kernelname} OBJECT ${kernelsourcepath})
-  target_include_directories(${kernelname} PUBLIC ${CMAKE_SOURCE_DIR}/app
-                      ${CMAKE_SOURCE_DIR}/app/CUDA ${CMAKE_SOURCE_DIR}/app/common)
+  target_include_directories(${kernelname} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..
+                      ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/../../common)
   target_compile_options(${kernelname} PRIVATE -DFUNCTION_ATTRIBUTES=__device__)
 endforeach(kernelsourcepath ${KERNEL_SRC})

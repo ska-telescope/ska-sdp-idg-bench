@@ -1,4 +1,4 @@
-#include "../common/math.hpp"
+#include "common/math.hpp"
 #include "util.hpp"
 
 namespace cpu {

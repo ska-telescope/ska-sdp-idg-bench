@@ -1,5 +1,5 @@
-#include "../common/math.hpp"
-#include "../common/types.hpp"
+#include "common/math.hpp"
+#include "common/types.hpp"
 #include "math.hip.hpp"
 #include "util.hpp"
 

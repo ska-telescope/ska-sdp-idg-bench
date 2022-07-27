@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parameters.hpp"
+#include "common/parameters.hpp"
 #include <hip/hip_complex.h>
 
 inline __device__ float2 conj(float2 a) { return hipConjf(a); }

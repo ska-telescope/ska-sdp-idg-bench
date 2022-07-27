@@ -20,7 +20,7 @@ if("${GPU_BRAND}" STREQUAL "NVIDIA")
 set_source_files_properties(util.cpp PROPERTIES LANGUAGE CUDA)
 endif()
 add_library(lib-hip OBJECT util.cpp)
-target_include_directories(lib-hip PUBLIC ${CMAKE_SOURCE_DIR}/app
+target_include_directories(lib-hip PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..
                                           ${HIP_INCLUDE_DIR})
 
 if(BUILD_LIBPOWERSENSOR)
@@ -45,8 +45,8 @@ foreach(kernelsourcepath ${KERNEL_SRC})
 
   # Build the library
   add_library(${kernelname} OBJECT ${kernelsourcepath})
-  target_include_directories(${kernelname} PUBLIC ${CMAKE_SOURCE_DIR}/app
-                      ${CMAKE_SOURCE_DIR}/app/HIP ${CMAKE_SOURCE_DIR}/app/common
+  target_include_directories(${kernelname} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/..
+                      ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/../../common
                       ${HIP_INCLUDE_DIR})
   target_compile_options(${kernelname} PRIVATE -DFUNCTION_ATTRIBUTES=__device__)
 endforeach(kernelsourcepath ${KERNEL_SRC})

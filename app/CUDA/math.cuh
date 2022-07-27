@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parameters.hpp"
+#include "common/parameters.hpp"
 #include <cuComplex.h>
 
 inline __device__ float2 conj(float2 a) { return cuConjf(a); }
