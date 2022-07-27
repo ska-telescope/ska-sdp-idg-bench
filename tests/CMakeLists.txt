@@ -1,7 +1,7 @@
 
 if(BUILD_CUDA)
   # KERNEL_SRC contains the CUDA kernels paths
-  file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/CUDA/kernels/*.cu")
+  file(GLOB KERNEL_SRC "${CMAKE_CURRENT_LIST_DIR}/../app/CUDA/kernels/*.cu")
 
   # Iterate all kernels
   foreach(kernelsourcepath ${KERNEL_SRC})
@@ -23,7 +23,7 @@ if(BUILD_CUDA)
 
     # Build the executable
     add_executable(${testname} ${testcommonsource})
-    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app
+    target_include_directories(${testname} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../app
                                                   ${CUDAToolkit_INCLUDE_DIRS})
     target_link_libraries(${testname} lib-cpu
                                       $<TARGET_OBJECTS:lib-cuda>
@@ -41,7 +41,7 @@ endif()
 
 if(BUILD_HIP)
   # KERNEL_SRC contains the HIP kernels paths
-  file(GLOB KERNEL_SRC "${CMAKE_SOURCE_DIR}/app/HIP/kernels/*.hip.cpp")
+  file(GLOB KERNEL_SRC "${CMAKE_CURRENT_LIST_DIR}/../app/HIP/kernels/*.hip.cpp")
 
   if("${GPU_BRAND}" STREQUAL "AMD")
   set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
@@ -67,7 +67,7 @@ if(BUILD_HIP)
 
     # Build the executable
     add_executable(${testname} ${testcommonsource})
-    target_include_directories(${testname} PUBLIC ${CMAKE_SOURCE_DIR}/app)
+    target_include_directories(${testname} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../app)
     if("${GPU_BRAND}" STREQUAL "NVIDIA")
     target_include_directories(${testname} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
     target_link_libraries(${testname} lib-cpu
