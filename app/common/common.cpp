@@ -47,8 +47,10 @@ void report(std::string name, double seconds, double gflops, double gbytes,
   if (joules != 0) {
     double watt = joules / seconds;
     double efficiency = gflops / joules;
+    double mvis_j = mvis / joules;
     std::cout << ", " << std::setw(w2) << watt << " W";
     std::cout << ", " << std::setw(w2) << efficiency << " GFLOP/s/W";
+    std::cout << ", " << std::setw(w2) << mvis_j << " MVis/J";
   }
   std::cout << std::endl;
 }
@@ -63,6 +65,7 @@ void report_csv(std::string name, std::string device_name,
     std::cout << "Saving output in " << file_path << std::endl;
 
     std::ofstream output;
+    device_name = std::regex_replace(device_name, std::regex("/"), "-");
     std::cout << file_path + "/" + device_name + "-" + name + file_extension
               << std::endl;
     output.open(file_path + "/" + device_name + "-" + name + file_extension);
@@ -85,8 +88,10 @@ void report_csv(std::string name, std::string device_name,
     if (joules != 0) {
       double watt = joules / seconds;
       double efficiency = gflops / joules;
+      double mvis_j = mvis / joules;
       output << "W," << watt << "\n";
       output << "GFLOP/s/W," << efficiency << "\n";
+      output << "MVis/J," << mvis_j << "\n";
     }
     output.close();
   }

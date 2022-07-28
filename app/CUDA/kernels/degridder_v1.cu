@@ -5,11 +5,15 @@
 namespace cuda {
 
 __global__ void
-kernel_degridder_reference(int grid_size, int subgrid_size, float image_size,
-                           float w_step_in_lambda, int nr_channels,
-                           int nr_stations, idg::UVWCoordinate<float> *uvw,
-                           float *wavenumbers, float2 *visibilities, float *spheroidal,
-                           float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
+kernel_degridder_v1(int grid_size, int subgrid_size, float image_size,
+                    float w_step_in_lambda, int nr_channels,
+                    int nr_stations, idg::UVWCoordinate<float> *uvw,
+                    float *wavenumbers, float2 *visibilities, float *spheroidal,
+                    float2 *aterms, idg::Metadata *metadata, float2 *subgrids) {
+  int tidx = threadIdx.x;
+  int tidy = threadIdx.y;
+  int tid = tidx + tidy * blockDim.x;
+  int nr_threads = blockDim.x * blockDim.y;
   int s = blockIdx.x;
 
   // Find offset of first subgrid
@@ -36,7 +40,11 @@ kernel_degridder_reference(int grid_size, int subgrid_size, float image_size,
   const float w_offset = 2 * M_PI * w_offset_in_lambda;
 
   // Iterate all timesteps
-  for (int time = 0; time < nr_timesteps; time++) {
+  for (int time = tid; time < nr_timesteps; time += nr_threads) {
+    if (time >= nr_timesteps) {
+      break;
+    }
+
     // Load UVW coordinates
     float u = uvw[time_offset + time].u;
     float v = uvw[time_offset + time].v;
@@ -116,7 +124,7 @@ kernel_degridder_reference(int grid_size, int subgrid_size, float image_size,
 }
 
 void p_run_degridder() {
-  p_run_degridder_((void *)kernel_degridder_reference, "degridder_reference", 1);
+  p_run_degridder_((void *)kernel_degridder_v1, "degridder_v1", 128);
 }
 
 void c_run_degridder(
@@ -133,7 +141,7 @@ void c_run_degridder(
   c_run_degridder_(nr_subgrids, grid_size, subgrid_size, image_size,
                    w_step_in_lambda, nr_channels, nr_stations, uvw, wavenumbers,
                    visibilities, spheroidal, aterms, metadata, subgrids,
-                   (void *)kernel_degridder_reference, 1);
+                   (void *)kernel_degridder_v1, 128);
 }
 
 } // namespace cuda

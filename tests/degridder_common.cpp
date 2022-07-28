@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "lib-cpu.hpp"
 
 #if defined(BUILD_CUDA)
@@ -8,21 +10,51 @@
 
 #include "test_util.hpp"
 
-int main() {
+#if defined(BUILD_CUDA)
+namespace cuda
+#elif defined(BUILD_HIP)
+namespace hip
+#endif
+{
+void p_run_degridder();
+
+void c_run_degridder(
+    int nr_subgrids, int grid_size, int subgrid_size, float image_size,
+    float w_step_in_lambda, int nr_channels, int nr_stations,
+    idg::Array2D<idg::UVWCoordinate<float>> &uvw,
+    idg::Array1D<float> &wavenumbers,
+    idg::Array3D<idg::Visibility<std::complex<float>>> &visibilities,
+    idg::Array2D<float> &spheroidal,
+    idg::Array4D<idg::Matrix2x2<std::complex<float>>> &aterms,
+    idg::Array1D<idg::Metadata> &metadata,
+    idg::Array4D<std::complex<float>> &subgrids);
+} // namespace cuda
+
+void run_performance() {
+#if defined(BUILD_CUDA)
+  cuda::print_device_info();
+  cuda::p_run_degridder();
+#elif defined(BUILD_HIP)
+  hip::print_device_info();
+  hip::p_run_degridder();
+#endif
+}
+
+void run_correctness() {
   std::cout << ">>> Correctness IDG-Degridder test" << std::endl;
 #if defined(BUILD_CUDA)
-  cuda::extern_print_device_info();
+  cuda::print_device_info();
   cuda::print_benchmark();
 #elif defined(BUILD_HIP)
-  hip::extern_print_device_info();
+  hip::print_device_info();
   hip::print_benchmark();
 #endif
 
-  // print IDG parameters?
+  // IDG parameters
   int nr_correlations = get_env_var("NR_CORRELATIONS", 4);
   int grid_size = get_env_var("GRID_SIZE", 1024);
   int subgrid_size = get_env_var("SUBGRID_SIZE", 32);
-  int nr_stations = get_env_var("NR_STATIONS", 10);
+  int nr_stations = get_env_var("NR_STATIONS", 2);
   int nr_timeslots = get_env_var("NR_TIMESLOTS", 2);
   int nr_timesteps = get_env_var("NR_TIMESTEPS_SUBGRID", 128);
   int nr_channels = get_env_var("NR_CHANNELS", 16);
@@ -37,11 +69,11 @@ int main() {
 
   // Allocate data structures on host
   std::cout << ">>> Allocate data structures on host" << std::endl;
-  idg::Array2D<idg::UVWCoordinate<float>> uvw(nr_baselines, total_nr_timesteps);
+  idg::Array2D<idg::UVWCoordinate<float>> uvw(nr_subgrids, nr_timesteps);
   idg::Array3D<idg::Visibility<std::complex<float>>> cpu_visibilities(
-      nr_baselines, total_nr_timesteps, nr_channels);
+      nr_subgrids, nr_timesteps, nr_channels);
   idg::Array3D<idg::Visibility<std::complex<float>>> gpu_visibilities(
-      nr_baselines, total_nr_timesteps, nr_channels);
+      nr_subgrids, nr_timesteps, nr_channels);
   idg::Array1D<idg::Baseline> baselines(nr_baselines);
   idg::Array4D<idg::Matrix2x2<std::complex<float>>> aterms(
       nr_timeslots, nr_stations, subgrid_size, subgrid_size);
@@ -75,18 +107,34 @@ int main() {
                                  aterms, metadata, subgrids);
   std::cout << ">>> Run on gpu" << std::endl;
 #if defined(BUILD_CUDA)
-  cuda::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
-                                  IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
-                                  uvw, wavenumbers, gpu_visibilities,
-                                  spheroidal, aterms, metadata, subgrids);
+  cuda::c_run_degridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE,
+                        W_STEP, nr_channels, nr_stations, uvw, wavenumbers,
+                        gpu_visibilities, spheroidal, aterms, metadata,
+                        subgrids);
 #elif defined(BUILD_HIP)
-  hip::c_run_degridder_reference(nr_subgrids, grid_size, subgrid_size,
-                                 IMAGE_SIZE, W_STEP, nr_channels, nr_stations,
-                                 uvw, wavenumbers, gpu_visibilities, spheroidal,
-                                 aterms, metadata, subgrids);
+  hip::c_run_degridder(nr_subgrids, grid_size, subgrid_size, IMAGE_SIZE, W_STEP,
+                       nr_channels, nr_stations, uvw, wavenumbers,
+                       gpu_visibilities, spheroidal, aterms, metadata,
+                       subgrids);
 #endif
 
   std::cout << ">>> Checking" << std::endl;
   // check algorithm correctness (check visibilities values)
   compare_visibilities(cpu_visibilities, gpu_visibilities);
+}
+
+int main(int argc, char *argv[]) {
+
+  if (argc == 1) {
+    run_performance();
+    return EXIT_SUCCESS;
+  } else if (argc == 2) {
+    if (std::strncmp(argv[1], "-c", 2) == 0) {
+      run_correctness();
+      return EXIT_SUCCESS;
+    }
+  }
+
+  std::cerr << "Usage: " << argv[0] << " [-c]" << std::endl;
+  return EXIT_FAILURE;
 }

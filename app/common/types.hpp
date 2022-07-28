@@ -50,7 +50,7 @@ template <class T> struct UVWCoordinate {
 };
 
 template <class T> T *allocate_memory(size_t n) {
-  void *ptr;
+  void *ptr = nullptr;
   posix_memalign(&ptr, 64, n * sizeof(T));
   return (T *)ptr;
 }
@@ -348,9 +348,9 @@ public:
 
 protected:
   size_t m_w_dim;
-  size_t m_x_dim;
-  size_t m_y_dim;
   size_t m_z_dim;
+  size_t m_y_dim;
+  size_t m_x_dim;
   bool m_delete_buffer;
   T *m_buffer;
 };

@@ -47,14 +47,12 @@ make install
 
 **NOTE**: there are also some scripts that can be used in the **scripts** folder.
 
-To build the benchmark for couda you could simply run this in the main folder:
+To build the benchmark for CUDA you could simply run this in the main folder:
 ```
 ./scripts/install_nvidia.sh
 ```
 
 ### Run benchmark
-cuda-c_vadd  cuda-p_vadd  hip-c_vadd  hip-p_vadd
-
 
 Simply run:
 ```

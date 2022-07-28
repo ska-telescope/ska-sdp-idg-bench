@@ -12,9 +12,9 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "init.hpp"
-//#include "math.hpp"
 #include "parameters.hpp"
 #include "print.hpp"
 //#include "types.hpp"
