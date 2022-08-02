@@ -4,7 +4,6 @@ project(idg-bench CXX)
 
 include(CMakeDependentOption)
 include(CheckLanguage)
-include(ExternalProject)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
@@ -83,7 +82,6 @@ if(BUILD_HIP)
     #set(ENV{HIP_PLATFORM} "nvidia")
     message("Run \"export HIP_PLATFORM=nvidia\" before calling \"make\".")
   endif()
-
 endif()
 
 add_subdirectory(app)
