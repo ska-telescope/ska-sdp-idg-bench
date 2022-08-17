@@ -161,7 +161,7 @@ kernel_degridder_v5(int grid_size, int subgrid_size, float image_size,
           float2 phasor = make_float2(__cosf(phase), __sinf(phase));
 
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
-            sum[pol] += pixel[pol] * phasor;
+            sum[pol] += cmul(pixel[pol], phasor);
           }
         } // end for j
 

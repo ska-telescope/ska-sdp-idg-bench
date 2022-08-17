@@ -75,7 +75,7 @@ __global__ void kernel_gridder_reference(
           size_t index = (time_offset + time) * nr_channels + chan;
           for (int pol = 0; pol < NR_CORRELATIONS; pol++) {
             float2 visibility = visibilities[index * NR_CORRELATIONS + pol];
-            pixels[pol] += visibility * phasor;
+            pixels[pol] += cmul(visibility, phasor);
           }
         }
       }

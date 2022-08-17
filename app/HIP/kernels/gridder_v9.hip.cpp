@@ -152,35 +152,40 @@ kernel_gridder_(const int grid_size, int subgrid_size, float image_size,
           float4 a = visibilities_[time*current_nr_channels+chan][0];
           float4 b = visibilities_[time*current_nr_channels+chan][1];
           float2 visXX = make_float2(a.x, a.y);
+          float2 visXX_i = make_float2(a.y, a.x);
           float2 visXY = make_float2(a.z, a.w);
+          float2 visXY_i = make_float2(a.w, a.z);
           float2 visYX = make_float2(b.x, b.y);
+          float2 visYX_i = make_float2(b.y, b.x);
           float2 visYY = make_float2(b.z, b.w);
+          float2 visYY_i = make_float2(b.w, b.z);
 
           for (int p = 0; p < UNROLL_PIXELS; p++) {
             float2 phasor = phasor_c[p];
+            
+            float2 phasor1 = {phasor.x, phasor.x};
+            float2 phasor2 = {-phasor.y, phasor.y};
+            
+            pixelXX[p] += phasor1 * visXX;
+            pixelXX[p] += phasor2 * visXX_i;
 
-            pixelXX[p].x += phasor.x * visXX.x;
-            pixelXX[p].y += phasor.x * visXX.y;
-            pixelXX[p].x -= phasor.y * visXX.y;
-            pixelXX[p].y += phasor.y * visXX.x;
+            pixelXY[p] += phasor1 * visXY;
+            pixelXY[p] += phasor2 * visXY_i;
 
-            pixelXY[p].x += phasor.x * visXY.x;
-            pixelXY[p].y += phasor.x * visXY.y;
-            pixelXY[p].x -= phasor.y * visXY.y;
-            pixelXY[p].y += phasor.y * visXY.x;
+            pixelYX[p] += phasor1 * visYX;
+            pixelYX[p] += phasor2 * visYX_i;
 
-            pixelYX[p].x += phasor.x * visYX.x;
-            pixelYX[p].y += phasor.x * visYX.y;
-            pixelYX[p].x -= phasor.y * visYX.y;
-            pixelYX[p].y += phasor.y * visYX.x;
-
-            pixelYY[p].x += phasor.x * visYY.x;
-            pixelYY[p].y += phasor.x * visYY.y;
-            pixelYY[p].x -= phasor.y * visYY.y;
-            pixelYY[p].y += phasor.y * visYY.x;
+            pixelYY[p] += phasor1 * visYY;
+            pixelYY[p] += phasor2 * visYY_i;
 
             if (chan < current_nr_channels - 1) {
-                phasor_c[p] = cmul(phasor_c[p], phasor_d[p]);
+                float2 phasor11 = make_float2(phasor_c[p].x, phasor_c[p].x);
+                float2 phasor22 = make_float2(-phasor_c[p].y, phasor_c[p].y);
+                float2 phasor33 = make_float2( phasor_d[p].x, phasor_d[p].y);
+                float2 phasor44 = make_float2( phasor_d[p].y,  phasor_d[p].x);
+                phasor_c[p] =  make_float2(0, 0);
+                phasor_c[p] += phasor11 * phasor33;
+                phasor_c[p] += phasor22 * phasor44;
             }
           } // end for p
         } // end for chan
@@ -203,8 +208,8 @@ kernel_gridder_(const int grid_size, int subgrid_size, float image_size,
 
       // Apply the conjugate transpose of the A-term
       apply_aterm(conj(aXX1), conj(aYX1), conj(aXY1), conj(aYY1), conj(aXX2),
-                  conj(aYX2), conj(aXY2), conj(aYY2), pixelXX[p], pixelXY[p],
-                  pixelYX[p], pixelYY[p]);
+                 conj(aYX2), conj(aXY2), conj(aYY2), pixelXX[p], pixelXY[p],
+                 pixelYX[p], pixelYY[p]);
 
       // Load spheroidal
       float sph = spheroidal[y * subgrid_size + x];
