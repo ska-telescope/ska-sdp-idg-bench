@@ -1,54 +1,17 @@
 #pragma once
 
 #include "common/parameters.hpp"
-#include <hip/hip_complex.h>
+#include <hip/hip_runtime.h>
 
-inline __device__ float2 conj(float2 a) { return hipConjf(a); }
-
-inline __device__ float2 operator+(float2 a, float2 b) {
-  return make_float2(a.x + b.x, a.y + b.y);
+inline __device__ float2 conj(float2 a)
+{
+  return make_float2(a.x, -a.y);
 }
 
-inline __device__ float2 operator-(float2 a, float2 b) {
-  return make_float2(a.x - b.x, a.y - b.y);
+inline __device__ float2 cmul(float2 a, float2 b) {
+    return make_float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
-inline __device__ float2 operator*(float2 a, float b) {
-  return make_float2(a.x * b, a.y * b);
-}
-
-inline __device__ float2 operator*(float a, float2 b) {
-  return make_float2(a * b.x, a * b.y);
-}
-
-inline __device__ float2 operator*(const float2 a, float2 b) {
-  return make_float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-
-inline __device__ float4 operator*(float4 a, float b) {
-  return make_float4(a.x * b, a.y * b, a.z * b, a.w * b);
-}
-
-inline __device__ float4 operator*(float a, float4 b) {
-  return make_float4(a * b.x, a * b.y, a * b.z, a * b.w);
-}
-
-inline __device__ void operator+=(float2 &a, float2 b) {
-  a.x += b.x;
-  a.y += b.y;
-}
-
-inline __device__ void operator+=(double2 &a, double2 b) {
-  a.x += b.x;
-  a.y += b.y;
-}
-
-inline __device__ void operator+=(float4 &a, float4 b) {
-  a.x += b.x;
-  a.y += b.y;
-  a.z += b.z;
-  a.w += b.w;
-}
 
 // Optimized methods
 #define UNROLL_PIXELS 4
@@ -68,14 +31,14 @@ inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
   // Apply aterm to subgrid: P = A1 * P
   // [ pixels[0], pixels[1];  = [ aXX1, aXY1;  [ pixelsXX, pixelsXY;
   //   pixels[2], pixels[3] ]     aYX1, aYY1 ]   pixelsYX], pixelsYY ] *
-  pixels[0] = (pixelsXX * aXX1);
-  pixels[0] += (pixelsYX * aXY1);
-  pixels[1] = (pixelsXY * aXX1);
-  pixels[1] += (pixelsYY * aXY1);
-  pixels[2] = (pixelsXX * aYX1);
-  pixels[2] += (pixelsYX * aYY1);
-  pixels[3] = (pixelsXY * aYX1);
-  pixels[3] += (pixelsYY * aYY1);
+  pixels[0] = cmul(pixelsXX, aXX1);
+  pixels[0] += cmul(pixelsYX, aXY1);
+  pixels[1] = cmul(pixelsXY, aXX1);
+  pixels[1] += cmul(pixelsYY, aXY1);
+  pixels[2] = cmul(pixelsXX, aYX1);
+  pixels[2] += cmul(pixelsYX, aYY1);
+  pixels[3] = cmul(pixelsXY, aYX1);
+  pixels[3] += cmul(pixelsYY, aYY1);
 
   pixelsXX = pixels[0];
   pixelsXY = pixels[1];
@@ -87,14 +50,14 @@ inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
   //    conj(aYX2);
   //      pixels[2], pixels[3] ]       pixelsYX, pixelsYY ]      conj(aXY2),
   //      conj(aYY2) ]
-  pixels[0] = (pixelsXX * conj(aXX2));
-  pixels[0] += (pixelsXY * conj(aXY2));
-  pixels[1] = (pixelsXX * conj(aYX2));
-  pixels[1] += (pixelsXY * conj(aYY2));
-  pixels[2] = (pixelsYX * conj(aXX2));
-  pixels[2] += (pixelsYY * conj(aXY2));
-  pixels[3] = (pixelsYX * conj(aYX2));
-  pixels[3] += (pixelsYY * conj(aYY2));
+  pixels[0] = cmul(pixelsXX, conj(aXX2));
+  pixels[0] += cmul(pixelsXY, conj(aXY2));
+  pixels[1] = cmul(pixelsXX, conj(aYX2));
+  pixels[1] += cmul(pixelsXY, conj(aYY2));
+  pixels[2] = cmul(pixelsYX, conj(aXX2));
+  pixels[2] += cmul(pixelsYY, conj(aXY2));
+  pixels[3] = cmul(pixelsYX, conj(aYX2));
+  pixels[3] += cmul(pixelsYY, conj(aYY2));
 }
 
 inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
