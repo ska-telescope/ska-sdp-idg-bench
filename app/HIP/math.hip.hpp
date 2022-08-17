@@ -60,6 +60,102 @@ inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
   pixels[3] += cmul(pixelsYY, conj(aYY2));
 }
 
+
+inline __device__ void apply_aterm_fp32(const float2 aXX1, const float2 aXY1,
+                                   const float2 aYX1, const float2 aYY1,
+                                   const float2 aXX2, const float2 aXY2,
+                                   const float2 aYX2, const float2 aYY2,
+                                   float2 pixels[NR_CORRELATIONS]) {
+  float2 pixelsXX = pixels[0];
+  float2 pixelsXY = pixels[1];
+  float2 pixelsYX = pixels[2];
+  float2 pixelsYY = pixels[3];
+
+  pixels[0] = make_float2(0, 0);
+  pixels[1] = make_float2(0, 0);
+  pixels[2] = make_float2(0, 0);
+  pixels[3] = make_float2(0, 0);
+  
+  float2 aXX1c1 = make_float2(aXX1.x, aXX1.x);
+  float2 aXX1c2 = make_float2(-aXX1.y, aXX1.y);  
+  float2 aXY1c1 = make_float2(aXY1.x, aXY1.x);
+  float2 aXY1c2 = make_float2(-aXY1.y, aXY1.y);
+  float2 aYX1c1 = make_float2(aYX1.x, aYX1.x);
+  float2 aYX1c2 = make_float2(-aYX1.y, aYX1.y);  
+  float2 aYY1c1 = make_float2(aYY1.x, aYY1.x);
+  float2 aYY1c2 = make_float2(-aYY1.y, aYY1.y);
+   
+  float2 pixelsXX_i = make_float2(pixelsXX.y, pixelsXX.x); 
+  float2 pixelsXY_i = make_float2(pixelsXY.y, pixelsXY.x); 
+  float2 pixelsYX_i = make_float2(pixelsYX.y, pixelsYX.x);
+  float2 pixelsYY_i = make_float2(pixelsYY.y, pixelsYY.x); 
+
+  pixels[0] += pixelsXX * aXX1c1;
+  pixels[0] += pixelsXX_i * aXX1c2;
+  pixels[0] += pixelsYX * aXY1c1;
+  pixels[0] += pixelsYX_i * aXY1c2;
+
+  pixels[1] += pixelsXY * aXX1c1;
+  pixels[1] += pixelsXY_i * aXX1c2;
+  pixels[1] += pixelsYY * aXY1c1;
+  pixels[1] += pixelsYY_i * aXY1c2;
+
+  pixels[2] += pixelsXX * aYX1c1;
+  pixels[2] += pixelsXX_i * aYX1c2;
+  pixels[2] += pixelsYX * aYY1c1;
+  pixels[2] += pixelsYX_i * aYY1c2;
+
+  pixels[3] += pixelsXY * aYX1c1;
+  pixels[3] += pixelsXY_i * aYX1c2;
+  pixels[3] += pixelsYY * aYY1c1;
+  pixels[3] += pixelsYY_i * aYY1c2;
+
+  pixelsXX = pixels[0];
+  pixelsXY = pixels[1];
+  pixelsYX = pixels[2];
+  pixelsYY = pixels[3];
+
+  pixels[0] = make_float2(0, 0);
+  pixels[1] = make_float2(0, 0);
+  pixels[2] = make_float2(0, 0);
+  pixels[3] = make_float2(0, 0);
+
+  float2 aXX2c1 = make_float2(aXX2.x, aXX2.x);
+  float2 aXX2c2 = make_float2(aXX2.y, -aXX2.y);  
+  float2 aXY2c1 = make_float2(aXY2.x, aXY2.x);
+  float2 aXY2c2 = make_float2(aXY2.y, -aXY2.y);
+  float2 aYX2c1 = make_float2(aYX2.x, aYX2.x);
+  float2 aYX2c2 = make_float2(aYX2.y, -aYX2.y);  
+  float2 aYY2c1 = make_float2(aYY2.x, aYY2.x);
+  float2 aYY2c2 = make_float2(aYY2.y, -aYY2.y);
+
+  pixelsXX_i = make_float2(pixelsXX.y, pixelsXX.x); 
+  pixelsXY_i = make_float2(pixelsXY.y, pixelsXY.x); 
+  pixelsYX_i = make_float2(pixelsYX.y, pixelsYX.x);
+  pixelsYY_i = make_float2(pixelsYY.y, pixelsYY.x); 
+
+  pixels[0] += pixelsXX * aXX2c1;
+  pixels[0] += pixelsXX_i * aXX2c2;
+  pixels[0] += pixelsXY * aXY2c1;
+  pixels[0] += pixelsXY_i * aXY2c2;
+
+  pixels[1] += pixelsXX * aYX2c1;
+  pixels[1] += pixelsXX_i * aYX2c2;
+  pixels[1] += pixelsXY * aYY2c1;
+  pixels[1] += pixelsXY_i * aYY2c2;
+
+  pixels[2] += pixelsYX * aXX2c1;
+  pixels[2] += pixelsYX_i * aXX2c2;
+  pixels[2] += pixelsYY * aXY2c1;
+  pixels[2] += pixelsYY_i * aXY2c2;
+
+  pixels[3] += pixelsYX * aYX2c1;
+  pixels[3] += pixelsYX_i * aYX2c2;
+  pixels[3] += pixelsYY * aYY2c1;
+  pixels[3] += pixelsYY_i * aYY2c2;
+}
+
+
 inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
                                    const float2 aYX1, const float2 aYY1,
                                    const float2 aXX2, const float2 aXY2,
@@ -69,6 +165,22 @@ inline __device__ void apply_aterm(const float2 aXX1, const float2 aXY1,
   float2 uv[NR_CORRELATIONS] = {uvXX, uvXY, uvYX, uvYY};
 
   apply_aterm(aXX1, aXY1, aYX1, aYY1, aXX2, aXY2, aYX2, aYY2, uv);
+
+  uvXX = uv[0];
+  uvXY = uv[1];
+  uvYX = uv[2];
+  uvYY = uv[3];
+}
+
+inline __device__ void apply_aterm_fp32(const float2 aXX1, const float2 aXY1,
+                                   const float2 aYX1, const float2 aYY1,
+                                   const float2 aXX2, const float2 aXY2,
+                                   const float2 aYX2, const float2 aYY2,
+                                   float2 &uvXX, float2 &uvXY, float2 &uvYX,
+                                   float2 &uvYY) {
+  float2 uv[NR_CORRELATIONS] = {uvXX, uvXY, uvYX, uvYY};
+
+  apply_aterm_fp32(aXX1, aXY1, aYX1, aYY1, aXX2, aXY2, aYX2, aYY2, uv);
 
   uvXX = uv[0];
   uvXY = uv[1];
