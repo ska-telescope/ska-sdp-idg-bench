@@ -3,6 +3,38 @@
 #include "common/parameters.hpp"
 #include <hip/hip_runtime.h>
 
+
+
+#ifdef __HIP_PLATFORM_NVIDIA__
+float2 __device__ operator*(const float2& x, 
+                 const float2& y) { 
+  return {x.x * y.x, x.y * y.y}; 
+}
+
+float2 __device__ operator+(const float2& x, 
+                  const float2& y) { 
+  return {x.x + y.x, x.y + y.y}; 
+} 
+
+inline __device__ float2 operator*(float2 a, float b) {
+  return make_float2(a.x * b, a.y * b);
+}
+
+inline __device__ float2 operator*(float a, float2 b) {
+  return make_float2(b.x * a, b.y * a);
+}
+
+inline __device__ void operator+=(float2 &a, float2 b) {
+  a.x += b.x;
+  a.y += b.y;
+}
+
+inline __device__ void operator*=(float2 &a, float2 b) {
+  a.x *= b.x;
+  a.y *= b.y;
+}
+#endif
+
 inline __device__ float2 conj(float2 a)
 {
   return make_float2(a.x, -a.y);
