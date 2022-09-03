@@ -258,7 +258,7 @@ kernel_gridder_v8(const int grid_size, int subgrid_size, float image_size,
 }
 
 void p_run_gridder() {
-  p_run_gridder_((void *)kernel_gridder_v8, "gridder_v8", 128);
+  p_run_gridder_((void *)kernel_gridder_v8, "gridder_v9", 128);
 }
 
 void c_run_gridder(
