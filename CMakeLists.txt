@@ -6,6 +6,8 @@ include(CMakeDependentOption)
 include(CheckLanguage)
 include(ExternalProject)
 
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install")
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 option(BUILD_LIBPOWERSENSOR OFF)
@@ -79,9 +81,11 @@ endif()
 if(BUILD_HIP)
   find_package(HIP REQUIRED)
   if("${GPU_BRAND}" STREQUAL "NVIDIA")
-    # FIXME
-    #set(ENV{HIP_PLATFORM} "nvidia")
-    message("Run \"export HIP_PLATFORM=nvidia\" before calling \"make\".")
+    set(ENV{CUDA_PATH} "$CUDA_ROOT")
+    set(ENV{HIP_PLATFORM} "nvidia")
+    set(ENV{HIP_COMPILER} "nvcc")
+    set(ENV{HIP_RUNTIME} "cuda")
+    set(ENV{HIPCC_COMPILE_FLAGS_APPEND} "-std=c++17")
   endif()
 
 endif()
